@@ -498,7 +498,7 @@ def tool_diary_read(agent_name: str, last_n: int = 10):
 
 # ==================== MCP PROTOCOL ====================
 
-TOOLS = {
+SERVICE_TOOLS = {
     "mempalace_status_health": {
         "description": "Health and storage counts for the new service-backed runtime.",
         "input_schema": {
@@ -1159,6 +1159,25 @@ TOOLS = {
     },
 }
 
+MCP_VISIBLE_TOOL_NAMES = (
+    "mempalace_status_health",
+    "mempalace_ingest_directory",
+    "mempalace_ingest_source",
+    "mempalace_migrate_legacy",
+    "mempalace_search_memory",
+    "mempalace_search_time_range",
+    "mempalace_explain_retrieval",
+    "mempalace_fetch_document",
+    "mempalace_fetch_evidence_trail",
+    "mempalace_extract_facts",
+    "mempalace_query_facts",
+    "mempalace_reindex",
+    "mempalace_recall_episodes",
+    "mempalace_compact_session_context",
+    "mempalace_prepare_startup_context",
+)
+MCP_TOOLS = {name: SERVICE_TOOLS[name] for name in MCP_VISIBLE_TOOL_NAMES}
+
 
 def handle_request(request):
     method = request.get("method", "")
@@ -1184,14 +1203,14 @@ def handle_request(request):
             "result": {
                 "tools": [
                     {"name": n, "description": t["description"], "inputSchema": t["input_schema"]}
-                    for n, t in TOOLS.items()
+                    for n, t in MCP_TOOLS.items()
                 ]
             },
         }
     elif method == "tools/call":
         tool_name = params.get("name")
         tool_args = params.get("arguments", {})
-        if tool_name not in TOOLS:
+        if tool_name not in MCP_TOOLS:
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,
@@ -1200,7 +1219,7 @@ def handle_request(request):
         # Coerce argument types based on input_schema.
         # MCP JSON transport may deliver integers as floats or strings;
         # ChromaDB and Python slicing require native int.
-        schema_props = TOOLS[tool_name]["input_schema"].get("properties", {})
+        schema_props = MCP_TOOLS[tool_name]["input_schema"].get("properties", {})
         for key, value in list(tool_args.items()):
             prop_schema = schema_props.get(key, {})
             declared_type = prop_schema.get("type")
@@ -1209,7 +1228,7 @@ def handle_request(request):
             elif declared_type == "number" and not isinstance(value, (int, float)):
                 tool_args[key] = float(value)
         try:
-            result = TOOLS[tool_name]["handler"](**tool_args)
+            result = MCP_TOOLS[tool_name]["handler"](**tool_args)
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,

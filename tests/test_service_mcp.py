@@ -103,6 +103,10 @@ def test_service_tools_are_listed() -> None:
     assert "mempalace_recall_episodes" in names
     assert "mempalace_compact_session_context" in names
     assert "mempalace_prepare_startup_context" in names
+    assert "mempalace_search" not in names
+    assert "mempalace_status" not in names
+    assert "mempalace_list_wings" not in names
+    assert "mempalace_add_drawer" not in names
 
 
 def test_service_mcp_tools_end_to_end(tmp_path: Path) -> None:
@@ -150,44 +154,27 @@ def test_service_mcp_tools_end_to_end(tmp_path: Path) -> None:
     assert len(fetch_payload["segments"]) >= 1
 
 
-def test_legacy_mcp_tool_names_can_use_service_runtime(tmp_path: Path) -> None:
-    workspace = tmp_path / "workspace"
-    _write(
-        workspace / "notes" / "compat.md",
-        "\n".join(
-            [
-                "Compatibility mode should let legacy MCP tools read the service runtime.",
-                "Retrieval output still needs provenance and score explanations.",
-            ]
-        ),
-    )
+def test_legacy_mcp_tool_names_are_hidden(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
 
-    ingest_payload = _call_tool(
-        "mempalace_ingest_directory",
-        {"directory": str(workspace), "config_path": str(config_path)},
-    )
-    assert ingest_payload["documents_written"] == 1
-
-    status_payload = _call_tool(
-        "mempalace_status",
-        {"runtime": "service", "config_path": str(config_path)},
-    )
-    assert status_payload["runtime"] == "service"
-    assert status_payload["counts"]["documents"] == 1
-
-    search_payload = _call_tool(
-        "mempalace_search",
+    response = handle_request(
         {
-            "query": "provenance explanations",
-            "runtime": "service",
-            "config_path": str(config_path),
-            "mode": "hybrid",
-        },
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "mempalace_search",
+                "arguments": {
+                    "query": "provenance explanations",
+                    "runtime": "service",
+                    "config_path": str(config_path),
+                    "mode": "hybrid",
+                },
+            },
+        }
     )
-    assert search_payload["runtime"] == "service"
-    assert search_payload["results"]
-    assert search_payload["results"][0]["retrieval_reason"]
+    assert response is not None
+    assert response["error"]["code"] == -32601
 
 
 def test_service_mcp_conversation_ingest(tmp_path: Path) -> None:
@@ -238,16 +225,14 @@ def test_service_mcp_legacy_migration_and_filtered_search(tmp_path: Path) -> Non
     assert migration_payload["source_type"] == "legacy_chroma"
 
     search_payload = _call_tool(
-        "mempalace_search",
+        "mempalace_search_memory",
         {
             "query": "vector search",
-            "runtime": "service",
             "config_path": str(config_path),
             "wing": "notes",
             "room": "planning",
         },
     )
-    assert search_payload["runtime"] == "service"
     assert search_payload["results"]
     assert search_payload["results"][0]["source_uri"] == "sprint.md"
 

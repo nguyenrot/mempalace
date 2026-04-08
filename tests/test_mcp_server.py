@@ -53,10 +53,14 @@ class TestHandleRequest:
         resp = handle_request({"method": "tools/list", "id": 2, "params": {}})
         tools = resp["result"]["tools"]
         names = {t["name"] for t in tools}
-        assert "mempalace_status" in names
-        assert "mempalace_search" in names
-        assert "mempalace_add_drawer" in names
-        assert "mempalace_kg_add" in names
+        assert "mempalace_status_health" in names
+        assert "mempalace_search_memory" in names
+        assert "mempalace_ingest_directory" in names
+        assert "mempalace_extract_facts" in names
+        assert "mempalace_status" not in names
+        assert "mempalace_search" not in names
+        assert "mempalace_add_drawer" not in names
+        assert "mempalace_kg_add" not in names
 
     def test_unknown_tool(self):
         from mempalace.mcp_server import handle_request
@@ -80,19 +84,28 @@ class TestHandleRequest:
         _patch_mcp_server(monkeypatch, config, palace_path, seeded_kg)
         from mempalace.mcp_server import handle_request
 
-        # Create a collection so status works
-        _get_collection(palace_path, create=True)
-
         resp = handle_request(
             {
                 "method": "tools/call",
                 "id": 5,
-                "params": {"name": "mempalace_status", "arguments": {}},
+                "params": {"name": "mempalace_status_health", "arguments": {"workspace_id": "test-workspace"}},
             }
         )
         assert "result" in resp
         content = json.loads(resp["result"]["content"][0]["text"])
-        assert "total_drawers" in content
+        assert "counts" in content
+
+    def test_legacy_tools_are_hidden_from_mcp_dispatch(self):
+        from mempalace.mcp_server import handle_request
+
+        resp = handle_request(
+            {
+                "method": "tools/call",
+                "id": 6,
+                "params": {"name": "mempalace_status", "arguments": {}},
+            }
+        )
+        assert resp["error"]["code"] == -32601
 
 
 # ── Read Tools ──────────────────────────────────────────────────────────
