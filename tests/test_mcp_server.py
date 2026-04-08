@@ -7,6 +7,7 @@ via monkeypatch to avoid touching real data.
 """
 
 import json
+from pathlib import Path
 
 
 def _patch_mcp_server(monkeypatch, config, palace_path, kg):
@@ -28,6 +29,26 @@ def _get_collection(palace_path, create=False):
     if create:
         return client.get_or_create_collection("mempalace_drawers")
     return client.get_collection("mempalace_drawers")
+
+
+def _write_service_config(path: Path) -> str:
+    config_path = path / "config.yaml"
+    runtime_dir = path / "runtime"
+    config_path.write_text(
+        "\n".join(
+            [
+                "workspace_id: test-workspace",
+                "storage:",
+                f"  base_dir: {runtime_dir}",
+                f"  metadata_path: {runtime_dir / 'memory.sqlite3'}",
+                "logging:",
+                "  json: false",
+                "  level: INFO",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return str(config_path)
 
 
 # ── Protocol Layer ──────────────────────────────────────────────────────
@@ -78,15 +99,22 @@ class TestHandleRequest:
         resp = handle_request({"method": "unknown/method", "id": 4, "params": {}})
         assert resp["error"]["code"] == -32601
 
-    def test_tools_call_dispatches(self, monkeypatch, config, palace_path, seeded_kg):
+    def test_tools_call_dispatches(self, monkeypatch, config, palace_path, seeded_kg, tmp_path: Path):
         _patch_mcp_server(monkeypatch, config, palace_path, seeded_kg)
         from mempalace.mcp_server import handle_request
+        config_path = _write_service_config(tmp_path)
 
         resp = handle_request(
             {
                 "method": "tools/call",
                 "id": 5,
-                "params": {"name": "mempalace_status", "arguments": {"workspace_id": "test-workspace"}},
+                "params": {
+                    "name": "mempalace_status",
+                    "arguments": {
+                        "workspace_id": "test-workspace",
+                        "config_path": config_path,
+                    },
+                },
             }
         )
         assert "result" in resp
