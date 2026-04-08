@@ -1,13 +1,36 @@
-workspace_id: default
+# Example project-local MemPalace configuration.
+#
+# In normal usage, `mempalace init` writes a project-local config for you at:
+#   .mempalace/config.yaml
+#
+# This file is a fuller operator example you can copy and adapt.
+
+workspace_id: example_project
+
 storage:
-  base_dir: ~/.mempalace/runtime
-  metadata_path: ~/.mempalace/runtime/metadata.sqlite3
+  # Use repo-local storage for the recommended per-project setup.
+  base_dir: ./.mempalace/runtime
+  metadata_path: ./.mempalace/runtime/metadata.sqlite3
+
+  # Currently supported backend:
+  # - sqlite
+  #
+  # The service runtime is designed so this can evolve later, but today
+  # `sqlite` is the expected production path for local mode.
   vector_backend: sqlite
+
 segmenter:
+  # Maximum segment size before the splitter creates more chunks.
   max_chars: 900
+
+  # Character overlap between adjacent segments.
   overlap_chars: 120
+
+  # Small texts below this threshold are usually kept as a single segment.
   min_chars: 80
+
 ingestion:
+  # Files with these extensions are considered ingest candidates for project mode.
   include_extensions:
     - .md
     - .txt
@@ -73,6 +96,8 @@ ingestion:
     - .properties
     - .dockerignore
     - .gitignore
+
+  # Common developer filenames without an extension.
   include_filenames:
     - Dockerfile
     - Containerfile
@@ -92,6 +117,8 @@ ingestion:
     - .env.sample
     - .env.local.example
     - .envrc
+
+  # Directories skipped by default during recursive project ingest.
   skip_directories:
     - .git
     - node_modules
@@ -116,24 +143,46 @@ ingestion:
     - .eggs
     - htmlcov
     - target
+
+  # Specific filenames skipped even if their extension would normally match.
   skip_filenames:
     - .gitignore
     - package-lock.json
+
+  # Files treated as conversation imports when using:
+  #   mempalace ingest-chat-history
+  # or:
+  #   mempalace ingest --mode convos
   conversation_extensions:
     - .txt
     - .md
     - .json
     - .jsonl
+
+  # Project manifest filenames used for deterministic wing/room classification.
   project_manifest_filenames:
     - mempalace.yaml
     - mempalace.yml
     - mempal.yaml
     - mempal.yml
+
+  # Used when no project manifest rule matches.
   default_room_name: general
+
 retrieval:
+  # Default result count when no explicit limit is passed.
   default_limit: 5
+
+  # Hybrid search weighting.
+  #
+  # These weights are only meaningful when mode=hybrid.
   keyword_weight: 0.6
   semantic_weight: 0.4
+
 logging:
+  # Typical values: DEBUG, INFO, WARNING, ERROR
   level: INFO
+
+  # When true, logs are emitted as structured JSON.
+  # This is recommended for agent integration and debugging.
   json: true

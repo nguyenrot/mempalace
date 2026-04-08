@@ -1,186 +1,357 @@
 # Roadmap
 
-## Current Status Snapshot
+## Roadmap Philosophy
 
-The local-first service runtime now covers the main vertical slice:
+The project no longer needs a vague “someday architecture” plan. It already has a usable local-first runtime, so the roadmap should answer a more operational question:
 
-- typed domain models and explicit storage ports
-- SQLite metadata, FTS5 keyword search, and deterministic local vectors
-- project and conversation ingestion with idempotent run tracking
-- hybrid/time-bounded retrieval with provenance and score breakdowns
+What do we finish next to make this safe, maintainable, and boring in production-like use?
+
+The answer is:
+
+1. finish the local runtime properly
+2. make migrations and operator behavior predictable
+3. make alternative backends possible without rewriting the core
+
+## Current Snapshot
+
+The current branch already includes:
+
+- a unified CLI built around the service runtime
+- aligned MCP tool names
+- project-local configuration and storage
+- SQLite metadata and FTS-backed keyword search
+- deterministic local vector indexing
+- project ingestion and conversation ingestion
+- evidence trails and retrieval explanations
+- deterministic fact extraction
+- startup-context and compact-context services
 - legacy Chroma migration into the new runtime
-- deterministic fact extraction plus entity storage
-- evidence trails, episode recall, session-context compaction, and startup-context preparation
-- CLI and MCP interfaces for the service runtime
 
-The remaining work is mostly around deeper structured-memory modeling, alternative backends, and deployment polish rather than the absence of a usable core.
+What remains is less about “can it work?” and more about “can operators trust it and evolve it?”
 
-## Phase 0: Repository Audit And Architecture Notes
+## Release Themes
+
+### Theme 1: Stabilize The Local Runtime
+
+Scope:
+
+- schema versioning
+- better migration tooling
+- clearer operational docs
+- stronger backup and restore guidance
+
+### Theme 2: Harden Retrieval And Structured Memory
+
+Scope:
+
+- stronger fact and relation modeling
+- better code-aware ranking
+- optional reranking
+- clearer explainability surfaces
+
+### Theme 3: Prepare For Swappable Backends
+
+Scope:
+
+- embedding provider abstraction beyond local hashing
+- vector backend abstraction beyond current SQLite implementation
+- relational backend path for Postgres
+
+### Theme 4: Prepare For Hosted And Multi-User Operation
+
+Scope:
+
+- explicit workspace ownership
+- service deployment boundaries
+- authn/authz design
+- operator-grade persistence assumptions
+
+## Phase 0: Audit And Architecture Notes
+
+Status: Completed
 
 Goals:
 
-- document the current architecture and risks
-- define the target package layout
-- identify what will be preserved versus replaced
+- document the real codebase
+- define terminology
+- capture architectural risks
 
-Deliverables:
+Deliverables already present:
 
-- `architecture.md`
-- `roadmap.md`
-- `migration.md`
+- [`architecture.md`](/Users/kynguyenpham/Memory/architecture.md)
+- [`roadmap.md`](/Users/kynguyenpham/Memory/roadmap.md)
+- [`migration.md`](/Users/kynguyenpham/Memory/migration.md)
 
-Exit criteria:
+Exit criteria met:
 
-- the team has a grounded map of the current codebase
-- the next implementation steps are explicit and sequenced
+- there is now a grounded description of the existing runtime
+- the refactor direction is explicit
 
 ## Phase 1: Domain Model And Storage Refactor
 
+Status: Mostly completed
+
 Goals:
 
-- introduce typed domain models
-- create explicit ports for metadata storage, vector indexing, and embeddings
-- establish schema versioning and persistent local metadata
+- introduce stable domain records
+- isolate storage behind interfaces
+- persist retrieval metadata explicitly
 
-Deliverables:
+Delivered:
 
-- `Workspace`, `Source`, `Document`, `Segment`, `Fact`, `Entity`, `Relation`, `Episode`
+- typed records for workspaces, sources, documents, segments, facts, entities, relations, and episodes
 - SQLite metadata catalog
-- FTS5 indexing
-- vector index abstraction
-- deterministic local embedding provider
+- FTS-backed search path
+- deterministic local vector backend
+- typed settings and structured logging
+
+Remaining work:
+
+- formal schema version table and migration IDs
+- tighter separation between metadata store and fact/relation store
+- more explicit workspace lifecycle records
 
 Exit criteria:
 
-- one ingestable source type can be stored with stable IDs and provenance
-- metadata and segment records can be fetched without going through Chroma-specific code
+- one source can be stored without Chroma-specific assumptions
+- retrieval can operate on the new metadata model alone
 
 ## Phase 2: Ingestion Pipeline Redesign
 
+Status: In progress, usable
+
 Goals:
 
-- separate scanning, parsing, normalization, segmentation, and indexing
-- make ingestion idempotent and observable
-- support incremental reindexing
+- make ingest idempotent
+- separate scanning, parsing, normalization, segmentation, indexing
+- keep project and conversation ingest deterministic
 
-Deliverables:
+Delivered:
 
-- ingestion requests and run records
-- content hashing and deduplication policy
-- source adapters for filesystem text and code files
-- follow-up adapters for ChatGPT, Claude, Slack, and transcript imports
+- per-run ingest summaries
+- checksum-based skipping and updates
+- filesystem scanning with `.gitignore` support
+- project classification via `mempalace.yaml`
+- conversation normalization and extraction modes
+
+Remaining work:
+
+- explicit ingest manifest records beyond run summaries
+- import adapters for more export formats with tighter validation
+- richer duplicate detection beyond checksum equivalence
+- operator-facing retry and partial-failure strategy
 
 Exit criteria:
 
-- rerunning ingest on unchanged content is a no-op
-- changed files reindex cleanly without duplicate segments
-- ingest logs show what happened and why
+- rerunning ingest on unchanged data is a no-op
+- changed sources update cleanly
+- operators can explain why a file was written, updated, or skipped
 
 ## Phase 3: Retrieval Pipeline Redesign
 
+Status: In progress, usable
+
 Goals:
 
-- make retrieval explainable and mode-driven
-- support keyword, semantic, hybrid, and time-aware recall
+- make retrieval explainable
+- support multiple search modes consistently
+- make evidence trails a first-class output
 
-Deliverables:
+Delivered:
 
-- retrieval planner
-- provenance-rich evidence records
-- score breakdowns
-- exact quote and document fetch paths
+- `keyword`, `semantic`, and `hybrid` modes
+- time-bounded search
+- exact metadata filters
+- explainable retrieval payloads
+- evidence trail lookup
+
+Remaining work:
+
+- pluggable reranker interface
+- code-aware ranking signals
+- better candidate set tuning for narrow metadata filters
+- operator tools for retrieval debugging at larger scales
 
 Exit criteria:
 
-- retrieval results consistently explain source, score, and reason
-- hybrid retrieval can be debugged without reading storage internals
+- every search result explains source, segment, score, and reason
+- operators can inspect a retrieval plan without reading internal storage code
 
 ## Phase 4: Agent Tooling And API Surface
 
+Status: Largely completed for local runtime
+
 Goals:
 
-- move external interfaces onto the service layer
-- reduce storage knowledge inside CLI and MCP adapters
+- unify public entrypoints on the service layer
+- align naming across CLI and MCP
+- remove MCP dependence on legacy tool naming
 
-Deliverables:
+Delivered:
 
-- clean Python API
-- CLI commands for ingest, reindex, search, fetch, and status
-- MCP adapter backed by application services
+- unified CLI around `init`, `ingest`, `search`, `status`
+- aligned MCP names like `mempalace_ingest`, `mempalace_search`, `mempalace_status`
+- hidden legacy MCP tools
+- Python API via `LocalMemoryPlatform`
+
+Remaining work:
+
+- optional HTTP or RPC service layer
+- richer operator commands for maintenance and data export
+- explicit “doctor” or “inspect” commands for runtime diagnostics
 
 Exit criteria:
 
-- CLI and MCP no longer query storage adapters directly
-- tool behavior can be tested via service mocks or fixtures
+- CLI, MCP, and Python API all talk to the same application services
+- legacy behavior is opt-in rather than the default interface
 
 ## Phase 5: Observability, Testing, And Benchmarks
 
+Status: In progress
+
 Goals:
 
-- make correctness and regressions visible
-- avoid benchmark theater by making claims reproducible
+- make behavior visible
+- make regressions reproducible
+- avoid benchmark theater
 
-Deliverables:
+Delivered:
 
-- structured logs
-- unit tests for core logic
-- integration tests for ingestion and retrieval
-- benchmark harness with documented datasets and modes
+- structured logging configuration
+- unit and integration coverage across CLI, MCP, ingest, and retrieval
+- CI on supported Python versions
+
+Remaining work:
+
+- benchmark harness with documented corpora
+- operational metrics definitions
+- explicit trace or request correlation IDs across more services
+- larger-scale regression datasets
 
 Exit criteria:
 
-- critical paths have deterministic tests
-- benchmark scripts state exact mode, backend, and dataset assumptions
+- performance or retrieval claims can be rerun
+- critical operational flows have deterministic tests
 
 ## Phase 6: Packaging, Docs, And Deployment
 
+Status: In progress
+
 Goals:
 
-- present a coherent public package
-- prepare for future hosted or multi-user deployment
+- publish a coherent package identity
+- provide operator documentation
+- make deployment assumptions explicit
 
-Deliverables:
+Delivered:
 
-- cleaned package exports
-- operator docs
-- deployment notes
-- migration guide for legacy users
+- package metadata aligned to the new fork ownership
+- per-repo installation docs
+- MCP integration docs
+- architecture, roadmap, and migration docs
+
+Remaining work:
+
+- release process docs
+- operator upgrade checklist
+- backup, restore, and disaster-recovery playbook
+- hosted deployment notes
 
 Exit criteria:
 
-- new users can understand the modern architecture from docs alone
-- the codebase is ready for optional Postgres or hosted backends without rewriting core logic
+- a new operator can install, configure, migrate, and recover a project without reading the code
 
-## Prioritized Implementation Order
+## Next Priority Milestones
 
-Implement first:
+### Milestone A: Storage And Migration Safety
 
-1. domain models
-2. metadata store
-3. segment persistence and FTS
-4. deterministic embeddings and vector abstraction
-5. ingestion service
-6. retrieval service
-7. legacy data migration utility
-8. tests and docs
+Priority: Highest
 
-Stub for now:
+Why:
 
-- fact extraction pipelines
-- reranker adapters
-- multi-user access control
-- hosted deployment adapters
-- advanced code-aware ranking
+- this is the last major trust gap for long-term use
 
-Defer until the service core is stable:
+Tasks:
 
-- Chroma compatibility adapter
+- add schema versioning to the SQLite runtime
+- add a clear migration history table
+- add a `mempalace doctor` or equivalent inspection command
+- document backup and restore with examples
+
+### Milestone B: Structured Memory Depth
+
+Priority: High
+
+Why:
+
+- facts exist, but relation modeling is still shallower than the target design
+
+Tasks:
+
+- formalize relation persistence and query behavior
+- connect entity and relation queries to evidence trails
+- define confidence handling and invalidation rules
+
+### Milestone C: Retrieval Extensibility
+
+Priority: High
+
+Why:
+
+- current retrieval is good enough locally, but not yet extensible enough for future backends
+
+Tasks:
+
+- define reranker interface
+- add embedding provider abstraction with at least one non-hashing provider
+- define vector backend adapter contract for Chroma/Postgres
+
+### Milestone D: Hosted Readiness
+
+Priority: Medium
+
+Why:
+
+- current runtime is intentionally local-first, but the architecture aims at future hosted support
+
+Tasks:
+
+- make workspace ownership and tenancy assumptions explicit
+- document API boundaries for a service deployment
+- define minimum auth, audit, and storage guarantees
+
+## Deferred Work
+
+These are intentionally deferred, not forgotten:
+
+- full HTTP API surface
+- multi-user auth and permissions
 - Postgres backend
-- HTTP API
-- session compaction and startup-context synthesis
+- external vector DB adapters
+- LLM-assisted extraction pipelines
+- hosted deployment automation
 
-Breaking changes worth making now:
+They should not block finishing the local runtime correctly.
 
-- introduce conventional domain terminology in new code
-- stop baking storage details into CLI and MCP handlers
-- treat ingestion as explicit runs with stable records instead of ad hoc file writes
+## Breaking Changes Worth Making
+
+These changes are acceptable and already aligned with the direction of the branch:
+
+- make the service runtime the default CLI behavior
+- keep legacy commands behind explicit names
+- keep MCP limited to service-runtime tools
+- prefer conventional domain names over the old memory-metaphor vocabulary
+- require explicit migration instead of implicit cross-runtime behavior
+
+## Definition Of “Operationally Complete”
+
+For this project, “complete” should mean:
+
+- new users can install and initialize a repo without editing code
+- agents can use MCP without guessing tool names
+- ingest is repeatable and explainable
+- retrieval is provenance-rich and inspectable
+- migration from legacy storage is documented and testable
+- operators can back up and restore project-local memory safely
+
+That is the standard the remaining work should aim at.
