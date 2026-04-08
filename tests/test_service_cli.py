@@ -89,7 +89,7 @@ def test_service_cli_commands_end_to_end(tmp_path: Path, monkeypatch, capsys) ->
     monkeypatch.setattr(
         sys,
         "argv",
-        ["mempalace", "ingest-directory", str(workspace), "--config", str(config_path)],
+        ["mempalace", "ingest", str(workspace), "--config", str(config_path)],
     )
     main()
     ingest_payload = json.loads(capsys.readouterr().out)
@@ -102,7 +102,7 @@ def test_service_cli_commands_end_to_end(tmp_path: Path, monkeypatch, capsys) ->
         "argv",
         [
             "mempalace",
-            "search-memory",
+            "search",
             "passkeys provenance",
             "--config",
             str(config_path),
@@ -129,7 +129,7 @@ def test_service_cli_commands_end_to_end(tmp_path: Path, monkeypatch, capsys) ->
     monkeypatch.setattr(
         sys,
         "argv",
-        ["mempalace", "status-health", "--config", str(config_path)],
+        ["mempalace", "status", "--config", str(config_path)],
     )
     main()
     status_payload = json.loads(capsys.readouterr().out)
@@ -145,14 +145,14 @@ def test_cli_workspace_init_and_ingest_current_project(tmp_path: Path, monkeypat
     )
     monkeypatch.chdir(workspace)
 
-    monkeypatch.setattr(sys, "argv", ["mempalace", "workspace-init"])
+    monkeypatch.setattr(sys, "argv", ["mempalace", "init"])
     main()
     init_output = capsys.readouterr().out
     assert "Service Runtime Init" in init_output
     assert (workspace / ".mempalace" / "config.yaml").exists()
     assert (workspace / ".mempalace" / ".gitignore").exists()
 
-    monkeypatch.setattr(sys, "argv", ["mempalace", "ingest-directory"])
+    monkeypatch.setattr(sys, "argv", ["mempalace", "ingest"])
     main()
     ingest_payload = json.loads(capsys.readouterr().out)
     assert ingest_payload["documents_written"] == 1
@@ -176,7 +176,7 @@ def test_ingest_chat_history_command_uses_current_directory(
     monkeypatch.chdir(exports_dir)
 
     monkeypatch.setattr(
-        sys, "argv", ["mempalace", "workspace-init", "--workspace-id", "chat_history"]
+        sys, "argv", ["mempalace", "init", "--workspace-id", "chat_history"]
     )
     main()
     capsys.readouterr()
@@ -194,17 +194,17 @@ def test_service_commands_fail_fast_without_local_workspace_init(
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     monkeypatch.chdir(workspace)
-    monkeypatch.setattr(sys, "argv", ["mempalace", "ingest-directory"])
+    monkeypatch.setattr(sys, "argv", ["mempalace", "ingest"])
 
     with pytest.raises(SystemExit) as exc_info:
         main()
 
     assert exc_info.value.code == 1
     output = capsys.readouterr().out
-    assert "workspace-init" in output
+    assert "mempalace init" in output
 
 
-def test_legacy_command_names_can_use_service_runtime(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_compatibility_aliases_still_work(tmp_path: Path, monkeypatch, capsys) -> None:
     workspace = tmp_path / "workspace"
     _write(
         workspace / "docs" / "search.md",
@@ -232,16 +232,14 @@ def test_legacy_command_names_can_use_service_runtime(tmp_path: Path, monkeypatc
             "mempalace",
             "search",
             "provenance score",
-            "--runtime",
-            "service",
             "--config",
             str(config_path),
         ],
     )
     main()
-    search_output = capsys.readouterr().out
-    assert "Service Results for" in search_output
-    assert "search.md" in search_output
+    search_payload = json.loads(capsys.readouterr().out)
+    assert search_payload["results"]
+    assert search_payload["results"][0]["source_uri"].endswith("search.md")
 
     monkeypatch.setattr(
         sys,
@@ -249,16 +247,13 @@ def test_legacy_command_names_can_use_service_runtime(tmp_path: Path, monkeypatc
         [
             "mempalace",
             "status",
-            "--runtime",
-            "service",
             "--config",
             str(config_path),
         ],
     )
     main()
-    status_output = capsys.readouterr().out
-    assert "Service Runtime Status" in status_output
-    assert "documents" in status_output
+    status_payload = json.loads(capsys.readouterr().out)
+    assert status_payload["counts"]["documents"] == 1
 
 
 def test_mine_command_can_use_service_runtime(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -284,16 +279,13 @@ def test_mine_command_can_use_service_runtime(tmp_path: Path, monkeypatch, capsy
             "mempalace",
             "mine",
             str(workspace),
-            "--runtime",
-            "service",
             "--config",
             str(config_path),
         ],
     )
     main()
-    output = capsys.readouterr().out
-    assert "Service Runtime Ingest" in output
-    assert "Documents written: 1" in output
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["documents_written"] == 1
 
 
 def test_mine_service_runtime_supports_convos_mode(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -313,17 +305,14 @@ def test_mine_service_runtime_supports_convos_mode(tmp_path: Path, monkeypatch, 
             str(workspace),
             "--mode",
             "convos",
-            "--runtime",
-            "service",
             "--config",
             str(config_path),
         ],
     )
     main()
-    output = capsys.readouterr().out
-    assert "Service Runtime Ingest" in output
-    assert "conversation_files" in output
-    assert "Segments written:" in output
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["source_type"] == "conversation_files"
+    assert payload["segments_written"] >= 1
 
 
 def test_migrate_legacy_command_supports_filtered_service_search(
@@ -355,8 +344,6 @@ def test_migrate_legacy_command_supports_filtered_service_search(
             "mempalace",
             "search",
             "vector search",
-            "--runtime",
-            "service",
             "--config",
             str(config_path),
             "--wing",
@@ -366,10 +353,10 @@ def test_migrate_legacy_command_supports_filtered_service_search(
         ],
     )
     main()
-    search_output = capsys.readouterr().out
-    assert "Service Results for" in search_output
-    assert "sprint.md" in search_output
-    assert "db.py" not in search_output
+    search_payload = json.loads(capsys.readouterr().out)
+    assert search_payload["results"]
+    assert search_payload["results"][0]["source_uri"] == "sprint.md"
+    assert all(item["source_uri"] != "db.py" for item in search_payload["results"])
 
 
 def test_service_project_ingest_supports_manifest_filters(
@@ -411,15 +398,13 @@ def test_service_project_ingest_supports_manifest_filters(
             "mempalace",
             "mine",
             str(workspace),
-            "--runtime",
-            "service",
             "--config",
             str(config_path),
         ],
     )
     main()
-    output = capsys.readouterr().out
-    assert "Documents written: 2" in output
+    ingest_payload = json.loads(capsys.readouterr().out)
+    assert ingest_payload["documents_written"] == 2
 
     monkeypatch.setattr(
         sys,
@@ -428,8 +413,6 @@ def test_service_project_ingest_supports_manifest_filters(
             "mempalace",
             "search",
             "roadmap migration",
-            "--runtime",
-            "service",
             "--config",
             str(config_path),
             "--wing",
@@ -439,9 +422,10 @@ def test_service_project_ingest_supports_manifest_filters(
         ],
     )
     main()
-    search_output = capsys.readouterr().out
-    assert "plan.md" in search_output
-    assert "service.py" not in search_output
+    search_payload = json.loads(capsys.readouterr().out)
+    assert search_payload["results"]
+    assert search_payload["results"][0]["source_uri"].endswith("plan.md")
+    assert all(not item["source_uri"].endswith("service.py") for item in search_payload["results"])
 
 
 def test_service_mine_runtime_respects_gitignore_overrides(
@@ -460,15 +444,13 @@ def test_service_mine_runtime_respects_gitignore_overrides(
             "mempalace",
             "mine",
             str(workspace),
-            "--runtime",
-            "service",
             "--config",
             str(config_path),
         ],
     )
     main()
-    first_output = capsys.readouterr().out
-    assert "Documents written: 1" in first_output
+    first_payload = json.loads(capsys.readouterr().out)
+    assert first_payload["documents_written"] == 1
 
     monkeypatch.setattr(
         sys,
@@ -477,8 +459,6 @@ def test_service_mine_runtime_respects_gitignore_overrides(
             "mempalace",
             "mine",
             str(workspace),
-            "--runtime",
-            "service",
             "--config",
             str(config_path),
             "--include-ignored",
@@ -486,8 +466,8 @@ def test_service_mine_runtime_respects_gitignore_overrides(
         ],
     )
     main()
-    second_output = capsys.readouterr().out
-    assert "guide.md" in second_output
+    second_payload = json.loads(capsys.readouterr().out)
+    assert any(item["uri"].endswith("guide.md") for item in second_payload["file_results"])
 
 
 def test_service_fact_commands_end_to_end(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -507,7 +487,7 @@ def test_service_fact_commands_end_to_end(tmp_path: Path, monkeypatch, capsys) -
     monkeypatch.setattr(
         sys,
         "argv",
-        ["mempalace", "ingest-directory", str(workspace), "--config", str(config_path)],
+        ["mempalace", "ingest", str(workspace), "--config", str(config_path)],
     )
     main()
     capsys.readouterr()
@@ -582,7 +562,7 @@ def test_service_cli_context_and_reindex_commands_end_to_end(
         "argv",
         [
             "mempalace",
-            "ingest-directory",
+            "ingest",
             str(convo_workspace),
             "--mode",
             "convos",

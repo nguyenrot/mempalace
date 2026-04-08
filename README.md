@@ -52,15 +52,15 @@ mempalace/
 
 The long-term target is documented in [architecture.md](./architecture.md). The legacy flat modules remain in place until the new service core can absorb their behavior with acceptable compatibility shims.
 
-## Service-Backed Commands
+## CLI Commands
 
-The new core already has a usable CLI surface alongside the legacy commands:
+The primary CLI now follows a single project-local flow:
 
 ```bash
-mempalace workspace-init
-mempalace ingest-directory
+mempalace init
+mempalace ingest
 mempalace ingest-chat-history /path/to/chats
-mempalace search-memory "jwt refresh tokens"
+mempalace search "jwt refresh tokens"
 mempalace search-time-range "jwt" --start-time 2025-01-01 --end-time 2025-12-31
 mempalace explain-retrieval "jwt provenance"
 mempalace fetch-document <document_id>
@@ -71,11 +71,11 @@ mempalace reindex
 mempalace recall-episodes "provenance"
 mempalace compact-session-context "jwt provenance"
 mempalace prepare-startup-context "jwt provenance" --agent-name codex
-mempalace status-health
+mempalace status
 mempalace migrate-legacy ~/.mempalace/palace
 ```
 
-These commands use the refactored SQLite/FTS/vector service layer rather than the legacy direct-to-Chroma path.
+These commands use the refactored SQLite/FTS/vector service layer. Older names such as `workspace-init`, `ingest-directory`, `search-memory`, and `status-health` still work as compatibility aliases, but they are no longer the primary interface.
 
 ### Per-Repo Installation
 
@@ -133,23 +133,23 @@ For day-to-day usage, the new CLI no longer requires hand-editing YAML just to g
 
 ```bash
 cd /path/to/project
-./.venv/bin/mempalace workspace-init
-./.venv/bin/mempalace ingest-directory
+./.venv/bin/mempalace init
+./.venv/bin/mempalace ingest
 ```
 
 What these do:
 
-- `mempalace workspace-init` creates a project-local runtime config at `.mempalace/config.yaml`
-- `mempalace workspace-init` also creates `.mempalace/.gitignore` so runtime data stays local and untracked
-- `mempalace workspace-init` seeds a broader developer-oriented extension list by default, including `swift`, `go`, `java`, `kt`, `rs`, `c/cpp`, `sh`, `plist`, `pbxproj`, and common web/backend formats
-- `mempalace workspace-init` also seeds common no-extension developer filenames such as `Dockerfile`, `Makefile`, `Podfile`, `Gemfile`, and `Package.swift`
-- `mempalace ingest-directory` ingests the current directory when no path is passed
+- `mempalace init` creates a project-local runtime config at `.mempalace/config.yaml`
+- `mempalace init` also creates `.mempalace/.gitignore` so runtime data stays local and untracked
+- `mempalace init` seeds a broader developer-oriented extension list by default, including `swift`, `go`, `java`, `kt`, `rs`, `c/cpp`, `sh`, `plist`, `pbxproj`, and common web/backend formats
+- `mempalace init` also seeds common no-extension developer filenames such as `Dockerfile`, `Makefile`, `Podfile`, `Gemfile`, and `Package.swift`
+- `mempalace ingest` ingests the current directory when no path is passed
 
 For chat exports:
 
 ```bash
 cd /path/to/chat-exports
-./.venv/bin/mempalace workspace-init --workspace-id myproject_chats
+./.venv/bin/mempalace init --workspace-id myproject_chats
 ./.venv/bin/mempalace ingest-chat-history
 ```
 
@@ -157,14 +157,14 @@ The service runtime now auto-discovers config in this order when `--config` is o
 
 1. a project-local `.mempalace/config.yaml` in the current directory or a parent directory
 
-If no local project config is found, service-backed commands now fail fast and ask you to run `mempalace workspace-init`.
+If no local project config is found, service-backed commands now fail fast and ask you to run `mempalace init`.
 
 You can still pass `--config` explicitly whenever you want to target a different workspace.
 
 If you already initialized a repo before the broader extension support was added, refresh the local config with:
 
 ```bash
-./.venv/bin/mempalace workspace-init --force
+./.venv/bin/mempalace init --force
 ```
 
 For project ingestion, the service runtime now supports deterministic project routing:
@@ -173,13 +173,13 @@ For project ingestion, the service runtime now supports deterministic project ro
 - room assignment follows a predictable order: path match, filename match, then content keyword scoring
 - assigned `wing`, `room`, `relative_path`, and classification strategy are stored in document and segment metadata
 
-For a softer migration, familiar commands can also target the new runtime explicitly:
+Compatibility aliases still work:
 
 ```bash
-mempalace mine /path/to/workspace --runtime service --config ./config.yaml
-mempalace mine /path/to/chats --mode convos --runtime service --config ./config.yaml
-mempalace search "jwt refresh tokens" --runtime service --config ./config.yaml --wing notes --room planning
-mempalace status --runtime service --config ./config.yaml
+mempalace workspace-init
+mempalace ingest-directory /path/to/workspace --config ./config.yaml
+mempalace search-memory "jwt refresh tokens" --config ./config.yaml --wing notes --room planning
+mempalace status-health --config ./config.yaml
 ```
 
 The MCP server also exposes service-backed tools:
@@ -208,10 +208,10 @@ For a normal development repository:
 cd /path/to/project
 uv venv
 uv pip install git+https://github.com/nguyenrot/mempalace.git
-./.venv/bin/mempalace workspace-init
-./.venv/bin/mempalace ingest-directory
+./.venv/bin/mempalace init
+./.venv/bin/mempalace ingest
 ./.venv/bin/mempalace extract-facts
-./.venv/bin/mempalace search-memory "authentication jwt"
+./.venv/bin/mempalace search "authentication jwt"
 ```
 
 The same flow with `pyenv` looks like this:
@@ -223,16 +223,16 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -U pip
 pip install git+https://github.com/nguyenrot/mempalace.git
-./.venv/bin/mempalace workspace-init
-./.venv/bin/mempalace ingest-directory
+./.venv/bin/mempalace init
+./.venv/bin/mempalace ingest
 ./.venv/bin/mempalace extract-facts
-./.venv/bin/mempalace search-memory "authentication jwt"
+./.venv/bin/mempalace search "authentication jwt"
 ```
 
 When the codebase changes substantially:
 
 ```bash
-./.venv/bin/mempalace ingest-directory
+./.venv/bin/mempalace ingest
 ./.venv/bin/mempalace extract-facts
 ```
 
@@ -392,13 +392,13 @@ uv run pytest
 
 ## Legacy Commands
 
-The existing CLI is still available:
+The legacy palace commands still exist behind explicit names when you need them:
 
 ```bash
-mempalace init <dir>
-mempalace mine <dir>
-mempalace search "query"
-mempalace status
+mempalace legacy-init <dir>
+mempalace legacy-mine <dir>
+mempalace legacy-search "query"
+mempalace legacy-status
 ```
 
-These commands currently use the legacy modules. The refactor is introducing a cleaner application core that future CLI and MCP surfaces will call into directly.
+They are no longer part of the primary CLI flow. The default `init`, `ingest`, `search`, and `status` commands all use the newer project-local service runtime.

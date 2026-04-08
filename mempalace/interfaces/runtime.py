@@ -23,7 +23,7 @@ def load_settings(config_path: str | None = None, workspace_id: str | None = Non
             settings = MemorySettings.from_yaml(local_config)
         else:
             raise FileNotFoundError(
-                "No local MemPalace config found. Run 'mempalace workspace-init' in the project first "
+                "No local MemPalace config found. Run 'mempalace init' in the project first "
                 "or pass --config explicitly."
             )
 

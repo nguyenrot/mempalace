@@ -2,47 +2,46 @@
 """
 MemPalace — Give your AI a memory. No API key required.
 
-Two ways to ingest:
-  Projects:      mempalace mine ~/projects/my_app          (code, docs, notes)
-  Conversations: mempalace mine ~/chats/ --mode convos     (Claude, ChatGPT, Slack)
-
-Same palace. Same search. Different ingest strategies.
+Project-local memory flow:
+  1. mempalace init                      (create .mempalace/ in the current repo)
+  2. mempalace ingest                    (index code, docs, and notes)
+  3. mempalace ingest-chat-history ...   (optional: add AI chat exports)
+  4. mempalace search "query"            (search with provenance)
 
 Commands:
-    mempalace init <dir>                  Detect rooms from your folder structure
-    mempalace workspace-init [dir]        Create project runtime config in the current project
-    mempalace split <dir>                 Split concatenated mega-files into per-session files
-    mempalace mine <dir>                  Mine project files (default)
-    mempalace mine <dir> --mode convos    Mine conversation exports
-    mempalace search "query"              Find anything, exact words
-    mempalace ingest-directory [dir]      Ingest via the new service-backed runtime
-    mempalace ingest-chat-history [dir]   Ingest AI chat exports via the new service-backed runtime
-    mempalace ingest-source <file>        Ingest one file via the new service-backed runtime
-    mempalace search-memory "query"       Search via the new service-backed runtime
-    mempalace search-time-range "query"   Search via the new runtime inside a time window
-    mempalace explain-retrieval "query"   Return inspectable retrieval payload from the new runtime
-    mempalace fetch-document <id>         Fetch one document from the new runtime
-    mempalace fetch-evidence              Fetch a provenance trail around a fact/segment/document
+    mempalace init [dir]                  Create project-local memory runtime
+    mempalace ingest [dir]                Ingest project files into local memory
+    mempalace ingest-chat-history [dir]   Ingest AI chat exports
+    mempalace search "query"              Search memory with provenance
+    mempalace status                      Show health for the current project memory
+    mempalace ingest-source <file>        Ingest one file into local memory
+    mempalace search-time-range "query"   Search inside a time window
+    mempalace explain-retrieval "query"   Return inspectable retrieval payload
+    mempalace fetch-document <id>         Fetch one document
+    mempalace fetch-evidence              Fetch a provenance trail
     mempalace extract-facts               Extract deterministic structured facts
-    mempalace query-facts                 Query structured facts from the new runtime
+    mempalace query-facts                 Query structured facts
     mempalace reindex                     Rebuild vector entries from stored segments
     mempalace recall-episodes             Recall recent or query-matched episodes
-    mempalace compact-session-context     Build compact agent context from stored memory
+    mempalace compact-session-context     Build compact agent context
     mempalace prepare-startup-context     Prepare startup context for an agent
-    mempalace status-health               Show health for the new runtime
-    mempalace migrate-legacy <palace>     Import legacy Chroma drawers into the new runtime
+    mempalace migrate-legacy <palace>     Import a legacy Chroma palace into the new runtime
+
+Compatibility aliases still work:
+    mempalace workspace-init
+    mempalace split <dir>                 Split concatenated mega-files into per-session files
+    mempalace ingest-directory
+    mempalace search-memory
+    mempalace status-health
     mempalace wake-up                     Show L0 + L1 wake-up context
     mempalace wake-up --wing my_app       Wake-up for a specific project
-    mempalace status                      Show what's been filed
 
 Examples:
-    mempalace init ~/projects/my_app
-    mempalace workspace-init
-    mempalace ingest-directory
+    mempalace init
+    mempalace ingest
     mempalace ingest-chat-history ~/exports/claude
-    mempalace mine ~/chats/claude-sessions --mode convos
     mempalace search "why did we switch to GraphQL"
-    mempalace search "pricing discussion" --wing my_app --room costs
+    mempalace status
 """
 
 import os
@@ -53,7 +52,7 @@ from pathlib import Path
 from .config import MempalaceConfig
 
 
-def cmd_init(args):
+def cmd_legacy_init(args):
     import json
     from pathlib import Path
     from .entity_detector import scan_for_detection, detect_entities, confirm_entities
@@ -82,14 +81,7 @@ def cmd_init(args):
     MempalaceConfig().init()
 
 
-def cmd_mine(args):
-    if getattr(args, "runtime", "legacy") == "service" or getattr(args, "config", None):
-        from .interfaces.cli.service_cli import render_ingestion_result, run_ingest_directory_service
-
-        result = run_ingest_directory_service(args)
-        print(render_ingestion_result(result))
-        return
-
+def cmd_legacy_mine(args):
     palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
     include_ignored = []
     for raw in args.include_ignored or []:
@@ -122,14 +114,7 @@ def cmd_mine(args):
         )
 
 
-def cmd_search(args):
-    if getattr(args, "runtime", "legacy") == "service" or getattr(args, "config", None):
-        from .interfaces.cli.service_cli import render_search_response, run_search_memory_service
-
-        response = run_search_memory_service(args)
-        print(render_search_response(response))
-        return
-
+def cmd_legacy_search(args):
     from .searcher import search, SearchError
 
     palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
@@ -181,14 +166,7 @@ def cmd_split(args):
         sys.argv = old_argv
 
 
-def cmd_status(args):
-    if getattr(args, "runtime", "legacy") == "service" or getattr(args, "config", None):
-        from .interfaces.cli.service_cli import render_status_health, run_status_health_service
-
-        health = run_status_health_service(args)
-        print(render_status_health(health))
-        return
-
+def cmd_legacy_status(args):
     from .miner import status
 
     palace_path = os.path.expanduser(args.palace) if args.palace else MempalaceConfig().palace_path
@@ -295,6 +273,22 @@ def cmd_workspace_init(args):
     from .interfaces.cli.service_cli import cmd_init_project_service
 
     cmd_init_project_service(args)
+
+
+def cmd_init(args):
+    cmd_workspace_init(args)
+
+
+def cmd_ingest(args):
+    cmd_ingest_directory(args)
+
+
+def cmd_search(args):
+    cmd_search_memory(args)
+
+
+def cmd_status(args):
+    cmd_status_health(args)
 
 
 def cmd_repair(args):
@@ -489,7 +483,74 @@ def cmd_compress(args):
         print("  (dry run -- nothing stored)")
 
 
+CLI_ALIAS_MAP = {
+    "workspace-init": "init",
+    "ingest-directory": "ingest",
+    "mine": "ingest",
+    "search-memory": "search",
+    "status-health": "status",
+}
+
+
+def _dispatch_legacy_command(argv: list[str]) -> bool:
+    """Handle explicit legacy commands outside the primary CLI surface."""
+    if not argv:
+        return False
+
+    command = argv[0]
+    if command not in {"legacy-init", "legacy-mine", "legacy-search", "legacy-status"}:
+        return False
+
+    parser = argparse.ArgumentParser(prog=f"mempalace {command}")
+    parser.add_argument(
+        "--palace",
+        default=None,
+        help="Where the legacy palace lives (default: from ~/.mempalace/config.json or ~/.mempalace/palace)",
+    )
+
+    if command == "legacy-init":
+        parser.add_argument("dir", help="Project directory to set up")
+        parser.add_argument("--yes", action="store_true", help="Auto-accept all detected entities")
+        args = parser.parse_args(argv[1:])
+        cmd_legacy_init(args)
+        return True
+
+    if command == "legacy-mine":
+        parser.add_argument("dir", help="Directory to mine")
+        parser.add_argument("--mode", choices=["projects", "convos"], default="projects")
+        parser.add_argument("--wing", default=None)
+        parser.add_argument("--no-gitignore", action="store_true")
+        parser.add_argument("--include-ignored", action="append", default=[])
+        parser.add_argument("--agent", default="mempalace")
+        parser.add_argument("--limit", type=int, default=0)
+        parser.add_argument("--dry-run", action="store_true")
+        parser.add_argument("--extract", choices=["exchange", "general"], default="exchange")
+        args = parser.parse_args(argv[1:])
+        cmd_legacy_mine(args)
+        return True
+
+    if command == "legacy-search":
+        parser.add_argument("query", help="What to search for")
+        parser.add_argument("--wing", default=None)
+        parser.add_argument("--room", default=None)
+        parser.add_argument("--results", type=int, default=5)
+        args = parser.parse_args(argv[1:])
+        cmd_legacy_search(args)
+        return True
+
+    args = parser.parse_args(argv[1:])
+    cmd_legacy_status(args)
+    return True
+
+
 def main():
+    argv = list(sys.argv[1:])
+    if argv:
+        argv[0] = CLI_ALIAS_MAP.get(argv[0], argv[0])
+
+    if _dispatch_legacy_command(argv):
+        return
+
     parser = argparse.ArgumentParser(
         description="MemPalace — Give your AI a memory. No API key required.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -504,132 +565,99 @@ def main():
     sub = parser.add_subparsers(dest="command")
 
     # init
-    p_init = sub.add_parser("init", help="Detect rooms from your folder structure")
-    p_init.add_argument("dir", help="Project directory to set up")
+    p_init = sub.add_parser("init", help="Create project-local memory runtime in the current repo")
     p_init.add_argument(
-        "--yes", action="store_true", help="Auto-accept all detected entities (non-interactive)"
-    )
-
-    # workspace-init
-    p_workspace_init = sub.add_parser(
-        "workspace-init",
-        help="Create project runtime config for the current project",
-    )
-    p_workspace_init.add_argument(
         "dir",
         nargs="?",
         default=".",
         help="Project directory to set up (default: current directory)",
     )
-    p_workspace_init.add_argument(
+    p_init.add_argument(
         "--workspace-id",
         default=None,
         help="Optional explicit workspace identifier for the service runtime",
     )
-    p_workspace_init.add_argument(
+    p_init.add_argument(
         "--force",
         action="store_true",
         help="Overwrite an existing local service runtime config",
     )
-
-    # mine
-    p_mine = sub.add_parser("mine", help="Mine files into the palace")
-    p_mine.add_argument("dir", help="Directory to mine")
-    p_mine.add_argument(
+    # ingest
+    p_ingest = sub.add_parser("ingest", help="Ingest project files into the current repo memory")
+    p_ingest.add_argument("dir", nargs="?", default=".", help="Directory to ingest (default: current directory)")
+    p_ingest.add_argument(
         "--mode",
         choices=["projects", "convos"],
         default="projects",
         help="Ingest mode: 'projects' for code/docs (default), 'convos' for chat exports",
     )
-    p_mine.add_argument("--wing", default=None, help="Wing name (default: directory name)")
-    p_mine.add_argument(
+    p_ingest.add_argument("--wing", default=None, help="Optional workspace wing override")
+    p_ingest.add_argument(
         "--no-gitignore",
         action="store_true",
         help="Don't respect .gitignore files when scanning project files",
     )
-    p_mine.add_argument(
+    p_ingest.add_argument(
         "--include-ignored",
         action="append",
         default=[],
         help="Always scan these project-relative paths even if ignored; repeat or pass comma-separated paths",
     )
-    p_mine.add_argument(
-        "--agent",
-        default="mempalace",
-        help="Your name — recorded on every drawer (default: mempalace)",
-    )
-    p_mine.add_argument("--limit", type=int, default=0, help="Max files to process (0 = all)")
-    p_mine.add_argument(
-        "--dry-run", action="store_true", help="Show what would be filed without filing"
-    )
-    p_mine.add_argument(
+    p_ingest.add_argument(
         "--extract",
         choices=["exchange", "general"],
         default="exchange",
         help="Extraction strategy for convos mode: 'exchange' (default) or 'general' (5 memory types)",
     )
-    p_mine.add_argument(
-        "--runtime",
-        choices=["legacy", "service"],
-        default="legacy",
-        help="Ingest using the legacy palace or the new service runtime (default: legacy)",
-    )
-    p_mine.add_argument(
+    p_ingest.add_argument(
         "--config",
         default=None,
         help="YAML config for service runtime ingest",
     )
-    p_mine.add_argument(
+    p_ingest.add_argument(
         "--workspace",
         default=None,
         help="Workspace override for service runtime ingest",
     )
-
     # search
-    p_search = sub.add_parser("search", help="Find anything, exact words")
+    p_search = sub.add_parser("search", help="Search current project memory with provenance")
     p_search.add_argument("query", help="What to search for")
     p_search.add_argument("--wing", default=None, help="Limit to one project")
     p_search.add_argument("--room", default=None, help="Limit to one room")
-    p_search.add_argument("--results", type=int, default=5, help="Number of results")
-    p_search.add_argument(
-        "--runtime",
-        choices=["legacy", "service"],
-        default="legacy",
-        help="Search using the legacy palace or the new service runtime (default: legacy)",
-    )
+    p_search.add_argument("--limit", "--results", dest="limit", type=int, default=5, help="Number of results")
     p_search.add_argument(
         "--config",
         default=None,
-        help="YAML config for service runtime search",
+        help="YAML config for search",
     )
     p_search.add_argument(
         "--workspace",
         default=None,
-        help="Workspace override for service runtime search",
+        help="Workspace override for search",
     )
     p_search.add_argument(
         "--mode",
         choices=["keyword", "semantic", "hybrid"],
         default="hybrid",
-        help="Retrieval mode for service runtime search",
-    )
-    p_search.add_argument(
-        "--limit",
-        type=int,
-        default=5,
-        help="Result limit for service runtime search",
+        help="Retrieval mode",
     )
     p_search.add_argument(
         "--start-time",
         default=None,
-        help="Optional start time for service runtime search",
+        help="Optional start time for search",
     )
     p_search.add_argument(
         "--end-time",
         default=None,
-        help="Optional end time for service runtime search",
+        help="Optional end time for search",
     )
-
+    p_search.add_argument(
+        "--filter",
+        action="append",
+        dest="filters",
+        default=[],
+        help="Exact metadata filter in key=value form; may be repeated",
+    )
     from .interfaces.cli.service_cli import add_service_cli_parsers
 
     add_service_cli_parsers(sub)
@@ -680,25 +708,10 @@ def main():
     )
 
     # status
-    p_status = sub.add_parser("status", help="Show what's been filed")
-    p_status.add_argument(
-        "--runtime",
-        choices=["legacy", "service"],
-        default="legacy",
-        help="Read status from the legacy palace or the new service runtime (default: legacy)",
-    )
-    p_status.add_argument(
-        "--config",
-        default=None,
-        help="YAML config for service runtime status",
-    )
-    p_status.add_argument(
-        "--workspace",
-        default=None,
-        help="Workspace override for service runtime status",
-    )
-
-    args = parser.parse_args()
+    p_status = sub.add_parser("status", help="Show health and storage counts for current project memory")
+    p_status.add_argument("--config", default=None, help="YAML config for current project memory")
+    p_status.add_argument("--workspace", default=None, help="Workspace override for current project memory")
+    args = parser.parse_args(argv)
 
     if not args.command:
         parser.print_help()
@@ -706,14 +719,11 @@ def main():
 
     dispatch = {
         "init": cmd_init,
-        "workspace-init": cmd_workspace_init,
-        "mine": cmd_mine,
+        "ingest": cmd_ingest,
         "split": cmd_split,
         "search": cmd_search,
-        "ingest-directory": cmd_ingest_directory,
         "ingest-chat-history": cmd_ingest_chat_history,
         "ingest-source": cmd_ingest_source,
-        "search-memory": cmd_search_memory,
         "search-time-range": cmd_search_time_range,
         "explain-retrieval": cmd_explain_retrieval,
         "fetch-document": cmd_fetch_document,
@@ -724,7 +734,6 @@ def main():
         "recall-episodes": cmd_recall_episodes,
         "compact-session-context": cmd_compact_session_context,
         "prepare-startup-context": cmd_prepare_startup_context,
-        "status-health": cmd_status_health,
         "migrate-legacy": cmd_migrate_legacy,
         "compress": cmd_compress,
         "wake-up": cmd_wakeup,

@@ -42,46 +42,6 @@ def _add_runtime_args(parser: argparse.ArgumentParser, *, include_workspace: boo
 
 def add_service_cli_parsers(subparsers: argparse._SubParsersAction) -> None:
     """Register service-backed CLI commands."""
-    ingest_parser = subparsers.add_parser(
-        "ingest-directory",
-        help="Ingest a directory using the new service-backed runtime",
-    )
-    ingest_parser.add_argument(
-        "dir",
-        nargs="?",
-        default=".",
-        help="Directory to ingest (default: current directory)",
-    )
-    ingest_parser.add_argument(
-        "--wing",
-        default=None,
-        help="Optional wing override for project ingestion",
-    )
-    ingest_parser.add_argument(
-        "--no-gitignore",
-        action="store_true",
-        help="Do not respect .gitignore during project ingestion",
-    )
-    ingest_parser.add_argument(
-        "--include-ignored",
-        action="append",
-        default=[],
-        help="Always ingest these project-relative paths even if ignored; repeat or pass comma-separated paths",
-    )
-    ingest_parser.add_argument(
-        "--mode",
-        choices=["projects", "convos"],
-        default="projects",
-        help="Ingest mode for the service-backed runtime",
-    )
-    ingest_parser.add_argument(
-        "--extract",
-        choices=["exchange", "general"],
-        default="exchange",
-        help="Conversation extraction mode when --mode convos",
-    )
-    _add_runtime_args(ingest_parser)
-
     ingest_chat_parser = subparsers.add_parser(
         "ingest-chat-history",
         help="Ingest AI chat exports using the service-backed runtime",
@@ -123,52 +83,6 @@ def add_service_cli_parsers(subparsers: argparse._SubParsersAction) -> None:
         help="Conversation extraction mode when --mode convos",
     )
     _add_runtime_args(ingest_source_parser)
-
-    search_parser = subparsers.add_parser(
-        "search-memory",
-        help="Search memory using the new retrieval service",
-    )
-    search_parser.add_argument("query", help="Search query")
-    search_parser.add_argument(
-        "--mode",
-        choices=["keyword", "semantic", "hybrid"],
-        default="hybrid",
-        help="Retrieval mode (default: hybrid)",
-    )
-    search_parser.add_argument(
-        "--limit",
-        type=int,
-        default=5,
-        help="Maximum number of results (default: 5)",
-    )
-    search_parser.add_argument(
-        "--start-time",
-        default=None,
-        help="Optional inclusive start time in ISO format",
-    )
-    search_parser.add_argument(
-        "--end-time",
-        default=None,
-        help="Optional inclusive end time in ISO format",
-    )
-    search_parser.add_argument(
-        "--wing",
-        default=None,
-        help="Optional exact-match wing filter",
-    )
-    search_parser.add_argument(
-        "--room",
-        default=None,
-        help="Optional exact-match room filter",
-    )
-    search_parser.add_argument(
-        "--filter",
-        action="append",
-        dest="filters",
-        default=[],
-        help="Exact metadata filter in key=value form; may be repeated",
-    )
-    _add_runtime_args(search_parser)
 
     fetch_parser = subparsers.add_parser(
         "fetch-document",
@@ -320,12 +234,6 @@ def add_service_cli_parsers(subparsers: argparse._SubParsersAction) -> None:
     startup_parser.add_argument("--episode-limit", type=int, default=4, help="Maximum episode items")
     startup_parser.add_argument("--max-chars", type=int, default=6000, help="Maximum startup context size")
     _add_runtime_args(startup_parser)
-
-    status_parser = subparsers.add_parser(
-        "status-health",
-        help="Show health and storage status for the new service-backed runtime",
-    )
-    _add_runtime_args(status_parser)
 
     migrate_parser = subparsers.add_parser(
         "migrate-legacy",
@@ -594,7 +502,7 @@ def render_project_init_result(result: ProjectInitResult) -> str:
     lines.append(f"  Updated:        {'yes' if result.updated else 'no'}")
     lines.append("")
     lines.append("  Next:")
-    lines.append("    mempalace ingest-directory")
+    lines.append("    mempalace ingest")
     lines.append("    mempalace ingest-chat-history /path/to/exports")
     lines.append("")
     return "\n".join(lines)
