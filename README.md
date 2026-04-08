@@ -86,7 +86,7 @@ The recommended model is local-per-project:
 - each repo runs its own MCP server
 - no global shared memory is required
 
-Install inside a repository:
+Install inside a repository with `uv`:
 
 ```bash
 cd /path/to/project
@@ -101,6 +101,31 @@ cd /path/to/project
 uv venv
 uv pip install -e /Users/kynguyenpham/Memory
 ```
+
+If you prefer `pyenv`, that works too:
+
+```bash
+cd /path/to/project
+pyenv install 3.13.5
+pyenv local 3.13.5
+python -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install git+https://github.com/nguyenrot/mempalace.git
+```
+
+Or against a local checkout:
+
+```bash
+pip install -e /Users/kynguyenpham/Memory
+```
+
+Recommended Python versions:
+
+- `3.11.x`
+- `3.13.x`
+
+Python `3.9` is no longer a good default for this project because upstream runtime dependencies such as `onnxruntime` do not consistently ship compatible wheels there anymore.
 
 ### CLI-first Project Setup
 
@@ -183,6 +208,21 @@ For a normal development repository:
 cd /path/to/project
 uv venv
 uv pip install git+https://github.com/nguyenrot/mempalace.git
+./.venv/bin/mempalace workspace-init
+./.venv/bin/mempalace ingest-directory
+./.venv/bin/mempalace extract-facts
+./.venv/bin/mempalace search-memory "authentication jwt"
+```
+
+The same flow with `pyenv` looks like this:
+
+```bash
+cd /path/to/project
+pyenv local 3.13.5
+python -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install git+https://github.com/nguyenrot/mempalace.git
 ./.venv/bin/mempalace workspace-init
 ./.venv/bin/mempalace ingest-directory
 ./.venv/bin/mempalace extract-facts
