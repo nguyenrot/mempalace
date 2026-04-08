@@ -53,12 +53,10 @@ class TestHandleRequest:
         resp = handle_request({"method": "tools/list", "id": 2, "params": {}})
         tools = resp["result"]["tools"]
         names = {t["name"] for t in tools}
-        assert "mempalace_status_health" in names
-        assert "mempalace_search_memory" in names
-        assert "mempalace_ingest_directory" in names
+        assert "mempalace_status" in names
+        assert "mempalace_search" in names
+        assert "mempalace_ingest" in names
         assert "mempalace_extract_facts" in names
-        assert "mempalace_status" not in names
-        assert "mempalace_search" not in names
         assert "mempalace_add_drawer" not in names
         assert "mempalace_kg_add" not in names
 
@@ -88,7 +86,7 @@ class TestHandleRequest:
             {
                 "method": "tools/call",
                 "id": 5,
-                "params": {"name": "mempalace_status_health", "arguments": {"workspace_id": "test-workspace"}},
+                "params": {"name": "mempalace_status", "arguments": {"workspace_id": "test-workspace"}},
             }
         )
         assert "result" in resp
@@ -102,7 +100,7 @@ class TestHandleRequest:
             {
                 "method": "tools/call",
                 "id": 6,
-                "params": {"name": "mempalace_status", "arguments": {}},
+                "params": {"name": "mempalace_list_wings", "arguments": {}},
             }
         )
         assert resp["error"]["code"] == -32601

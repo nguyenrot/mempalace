@@ -5,20 +5,18 @@ MemPalace MCP Server — read/write palace access for Claude Code
 Install: claude mcp add mempalace -- python -m mempalace.mcp_server
 
 Tools (read):
-  mempalace_status          — total drawers, wing/room breakdown
-  mempalace_list_wings      — all wings with drawer counts
-  mempalace_list_rooms      — rooms within a wing
-  mempalace_get_taxonomy    — full wing → room → count tree
-  mempalace_search          — semantic search, optional wing/room filter
+  mempalace_status          — health and storage counts for the new runtime
+  mempalace_ingest          — ingest a directory into the new runtime
   mempalace_ingest_source   — ingest one explicit file into the new runtime
+  mempalace_search          — search the new runtime with provenance
   mempalace_search_time_range — search the new runtime inside a time window
   mempalace_explain_retrieval — inspect retrieval plan, evidence, and score breakdowns
-  mempalace_fetch_evidence_trail — fetch provenance around a fact, segment, or document
+  mempalace_fetch_document  — fetch one document and its indexed segments
+  mempalace_fetch_evidence  — fetch provenance around a fact, segment, or document
   mempalace_reindex         — rebuild vectors from stored segments
   mempalace_recall_episodes — recall recent or query-matched episodes
   mempalace_compact_session_context — build compact agent context
   mempalace_prepare_startup_context — prepare startup context for an agent
-  mempalace_check_duplicate — check if content already exists before filing
   mempalace_migrate_legacy  — import legacy Chroma drawers into the new runtime
   mempalace_extract_facts   — deterministic fact extraction in the new runtime
   mempalace_query_facts     — query structured facts in the new runtime
@@ -499,7 +497,7 @@ def tool_diary_read(agent_name: str, last_n: int = 10):
 # ==================== MCP PROTOCOL ====================
 
 SERVICE_TOOLS = {
-    "mempalace_status_health": {
+    "mempalace_legacy_status_hidden": {
         "description": "Health and storage counts for the new service-backed runtime.",
         "input_schema": {
             "type": "object",
@@ -516,7 +514,7 @@ SERVICE_TOOLS = {
         },
         "handler": tool_status_health_service,
     },
-    "mempalace_ingest_directory": {
+    "mempalace_ingest": {
         "description": "Ingest a directory through the new service-backed runtime. Stores documents, segments, keyword index, and vector index with explicit provenance.",
         "input_schema": {
             "type": "object",
@@ -619,7 +617,7 @@ SERVICE_TOOLS = {
         },
         "handler": tool_migrate_legacy_service,
     },
-    "mempalace_search_memory": {
+    "mempalace_legacy_search_hidden": {
         "description": "Search memory through the new service-backed runtime. Returns retrieval plan, evidence, and score breakdowns.",
         "input_schema": {
             "type": "object",
@@ -730,7 +728,7 @@ SERVICE_TOOLS = {
         },
         "handler": tool_fetch_document_service,
     },
-    "mempalace_fetch_evidence_trail": {
+    "mempalace_fetch_evidence": {
         "description": "Fetch a provenance trail around a fact, segment, or document in the new service-backed runtime.",
         "input_schema": {
             "type": "object",
@@ -1160,15 +1158,15 @@ SERVICE_TOOLS = {
 }
 
 MCP_VISIBLE_TOOL_NAMES = (
-    "mempalace_status_health",
-    "mempalace_ingest_directory",
+    "mempalace_status",
+    "mempalace_ingest",
     "mempalace_ingest_source",
     "mempalace_migrate_legacy",
-    "mempalace_search_memory",
+    "mempalace_search",
     "mempalace_search_time_range",
     "mempalace_explain_retrieval",
     "mempalace_fetch_document",
-    "mempalace_fetch_evidence_trail",
+    "mempalace_fetch_evidence",
     "mempalace_extract_facts",
     "mempalace_query_facts",
     "mempalace_reindex",

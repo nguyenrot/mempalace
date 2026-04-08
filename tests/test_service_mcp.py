@@ -88,23 +88,21 @@ def test_service_tools_are_listed() -> None:
     response = handle_request({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
     assert response is not None
     names = {tool["name"] for tool in response["result"]["tools"]}
-    assert "mempalace_status_health" in names
-    assert "mempalace_ingest_directory" in names
+    assert "mempalace_status" in names
+    assert "mempalace_ingest" in names
     assert "mempalace_ingest_source" in names
     assert "mempalace_migrate_legacy" in names
     assert "mempalace_extract_facts" in names
     assert "mempalace_query_facts" in names
-    assert "mempalace_search_memory" in names
+    assert "mempalace_search" in names
     assert "mempalace_search_time_range" in names
     assert "mempalace_explain_retrieval" in names
     assert "mempalace_fetch_document" in names
-    assert "mempalace_fetch_evidence_trail" in names
+    assert "mempalace_fetch_evidence" in names
     assert "mempalace_reindex" in names
     assert "mempalace_recall_episodes" in names
     assert "mempalace_compact_session_context" in names
     assert "mempalace_prepare_startup_context" in names
-    assert "mempalace_search" not in names
-    assert "mempalace_status" not in names
     assert "mempalace_list_wings" not in names
     assert "mempalace_add_drawer" not in names
 
@@ -124,7 +122,7 @@ def test_service_mcp_tools_end_to_end(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
 
     ingest_payload = _call_tool(
-        "mempalace_ingest_directory",
+        "mempalace_ingest",
         {"directory": str(workspace), "config_path": str(config_path)},
     )
     assert ingest_payload["documents_written"] == 1
@@ -132,14 +130,14 @@ def test_service_mcp_tools_end_to_end(tmp_path: Path) -> None:
     assert document_id
 
     status_payload = _call_tool(
-        "mempalace_status_health",
+        "mempalace_status",
         {"config_path": str(config_path)},
     )
     assert status_payload["workspace_id"] == "mcp-workspace"
     assert status_payload["counts"]["documents"] == 1
 
     search_payload = _call_tool(
-        "mempalace_search_memory",
+        "mempalace_search",
         {"query": "provenance scores", "config_path": str(config_path), "mode": "hybrid"},
     )
     assert search_payload["results"]
@@ -163,12 +161,9 @@ def test_legacy_mcp_tool_names_are_hidden(tmp_path: Path) -> None:
             "id": 1,
             "method": "tools/call",
             "params": {
-                "name": "mempalace_search",
+                "name": "mempalace_list_wings",
                 "arguments": {
-                    "query": "provenance explanations",
-                    "runtime": "service",
                     "config_path": str(config_path),
-                    "mode": "hybrid",
                 },
             },
         }
@@ -194,7 +189,7 @@ def test_service_mcp_conversation_ingest(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
 
     ingest_payload = _call_tool(
-        "mempalace_ingest_directory",
+        "mempalace_ingest",
         {
             "directory": str(workspace),
             "config_path": str(config_path),
@@ -207,7 +202,7 @@ def test_service_mcp_conversation_ingest(tmp_path: Path) -> None:
     assert ingest_payload["segments_written"] >= 1
 
     search_payload = _call_tool(
-        "mempalace_search_memory",
+        "mempalace_search",
         {"query": "SQLite provenance", "config_path": str(config_path), "mode": "hybrid"},
     )
     assert search_payload["results"]
@@ -225,7 +220,7 @@ def test_service_mcp_legacy_migration_and_filtered_search(tmp_path: Path) -> Non
     assert migration_payload["source_type"] == "legacy_chroma"
 
     search_payload = _call_tool(
-        "mempalace_search_memory",
+        "mempalace_search",
         {
             "query": "vector search",
             "config_path": str(config_path),
@@ -268,13 +263,13 @@ def test_service_mcp_project_ingest_supports_manifest_filters(tmp_path: Path) ->
     config_path = _write_config(tmp_path)
 
     ingest_payload = _call_tool(
-        "mempalace_ingest_directory",
+        "mempalace_ingest",
         {"directory": str(workspace), "config_path": str(config_path)},
     )
     assert ingest_payload["documents_written"] == 2
 
     search_payload = _call_tool(
-        "mempalace_search_memory",
+        "mempalace_search",
         {
             "query": "roadmap migration",
             "config_path": str(config_path),
@@ -294,13 +289,13 @@ def test_service_mcp_project_ingest_respects_gitignore_overrides(tmp_path: Path)
     config_path = _write_config(tmp_path)
 
     ingest_payload = _call_tool(
-        "mempalace_ingest_directory",
+        "mempalace_ingest",
         {"directory": str(workspace), "config_path": str(config_path)},
     )
     assert ingest_payload["documents_written"] == 1
 
     include_payload = _call_tool(
-        "mempalace_ingest_directory",
+        "mempalace_ingest",
         {
             "directory": str(workspace),
             "config_path": str(config_path),
@@ -325,7 +320,7 @@ def test_service_mcp_fact_tools_end_to_end(tmp_path: Path) -> None:
     config_path = _write_config(tmp_path)
 
     ingest_payload = _call_tool(
-        "mempalace_ingest_directory",
+        "mempalace_ingest",
         {"directory": str(workspace), "config_path": str(config_path)},
     )
     assert ingest_payload["documents_written"] == 1
@@ -377,7 +372,7 @@ def test_service_mcp_context_and_reindex_tools_end_to_end(tmp_path: Path) -> Non
     assert ingest_source_payload["documents_written"] == 1
 
     convo_payload = _call_tool(
-        "mempalace_ingest_directory",
+        "mempalace_ingest",
         {
             "directory": str(convo_workspace),
             "mode": "convos",
@@ -399,7 +394,7 @@ def test_service_mcp_context_and_reindex_tools_end_to_end(tmp_path: Path) -> Non
     fact_id = facts_payload[0]["fact_id"]
 
     evidence_payload = _call_tool(
-        "mempalace_fetch_evidence_trail",
+        "mempalace_fetch_evidence",
         {"fact_id": fact_id, "config_path": str(config_path)},
     )
     assert evidence_payload["focus_fact"]["fact_id"] == fact_id

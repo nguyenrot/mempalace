@@ -182,19 +182,19 @@ mempalace search-memory "jwt refresh tokens" --config ./config.yaml --wing notes
 mempalace status-health --config ./config.yaml
 ```
 
-The MCP server also exposes service-backed tools:
+The MCP server also exposes service-backed tools with names aligned to the CLI:
 
-- `mempalace_status_health`
-- `mempalace_ingest_directory`
+- `mempalace_status`
+- `mempalace_ingest`
 - `mempalace_ingest_source`
 - `mempalace_migrate_legacy`
 - `mempalace_extract_facts`
 - `mempalace_query_facts`
-- `mempalace_search_memory`
+- `mempalace_search`
 - `mempalace_search_time_range`
 - `mempalace_explain_retrieval`
 - `mempalace_fetch_document`
-- `mempalace_fetch_evidence_trail`
+- `mempalace_fetch_evidence`
 - `mempalace_reindex`
 - `mempalace_recall_episodes`
 - `mempalace_compact_session_context`
