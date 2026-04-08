@@ -57,27 +57,57 @@ The long-term target is documented in [architecture.md](./architecture.md). The 
 The new core already has a usable CLI surface alongside the legacy commands:
 
 ```bash
-mempalace ingest-directory /path/to/workspace --config ./config.yaml
-mempalace ingest-source /path/to/workspace/docs/decision.md --config ./config.yaml
-mempalace ingest-directory /path/to/chats --config ./config.yaml --mode convos --extract exchange
-mempalace search-memory "jwt refresh tokens" --config ./config.yaml --mode hybrid
-mempalace search-time-range "jwt" --config ./config.yaml --start-time 2025-01-01 --end-time 2025-12-31
-mempalace explain-retrieval "jwt provenance" --config ./config.yaml
-mempalace search-memory "vector search" --config ./config.yaml --wing notes --room planning
-mempalace ingest-directory /path/to/workspace --config ./config.yaml --wing billing_app
-mempalace fetch-document <document_id> --config ./config.yaml
-mempalace fetch-evidence --fact-id <fact_id> --config ./config.yaml
-mempalace extract-facts --config ./config.yaml
-mempalace query-facts "JWT" --predicate uses --config ./config.yaml
-mempalace reindex --config ./config.yaml
-mempalace recall-episodes "provenance" --config ./config.yaml
-mempalace compact-session-context "jwt provenance" --config ./config.yaml
-mempalace prepare-startup-context "jwt provenance" --agent-name codex --config ./config.yaml
-mempalace status-health --config ./config.yaml
-mempalace migrate-legacy ~/.mempalace/palace --config ./config.yaml
+mempalace workspace-init
+mempalace ingest-directory
+mempalace ingest-chat-history /path/to/chats
+mempalace search-memory "jwt refresh tokens"
+mempalace search-time-range "jwt" --start-time 2025-01-01 --end-time 2025-12-31
+mempalace explain-retrieval "jwt provenance"
+mempalace fetch-document <document_id>
+mempalace fetch-evidence --fact-id <fact_id>
+mempalace extract-facts
+mempalace query-facts "JWT" --predicate uses
+mempalace reindex
+mempalace recall-episodes "provenance"
+mempalace compact-session-context "jwt provenance"
+mempalace prepare-startup-context "jwt provenance" --agent-name codex
+mempalace status-health
+mempalace migrate-legacy ~/.mempalace/palace
 ```
 
 These commands use the refactored SQLite/FTS/vector service layer rather than the legacy direct-to-Chroma path.
+
+### CLI-first project setup
+
+For day-to-day usage, the new CLI no longer requires hand-editing YAML just to get started:
+
+```bash
+cd /path/to/project
+mempalace workspace-init
+mempalace ingest-directory
+```
+
+What these do:
+
+- `mempalace workspace-init` creates a project-local runtime config at `.mempalace/config.yaml`
+- `mempalace workspace-init` also creates `.mempalace/.gitignore` so runtime data stays local and untracked
+- `mempalace ingest-directory` ingests the current directory when no path is passed
+
+For chat exports:
+
+```bash
+cd /path/to/chat-exports
+mempalace workspace-init --workspace-id myproject_chats
+mempalace ingest-chat-history
+```
+
+The service runtime now auto-discovers config in this order when `--config` is omitted:
+
+1. a project-local `.mempalace/config.yaml` in the current directory or a parent directory
+
+If no local project config is found, service-backed commands now fail fast and ask you to run `mempalace workspace-init`.
+
+You can still pass `--config` explicitly whenever you want to target a different workspace.
 
 For project ingestion, the service runtime now supports deterministic project routing:
 

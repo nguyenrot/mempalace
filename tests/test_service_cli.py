@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import chromadb
+import pytest
 
 from mempalace.cli import main
 
@@ -134,6 +135,73 @@ def test_service_cli_commands_end_to_end(tmp_path: Path, monkeypatch, capsys) ->
     status_payload = json.loads(capsys.readouterr().out)
     assert status_payload["workspace_id"] == "cli-workspace"
     assert status_payload["counts"]["documents"] == 1
+
+
+def test_cli_workspace_init_and_ingest_current_project(tmp_path: Path, monkeypatch, capsys) -> None:
+    workspace = tmp_path / "workspace"
+    _write(
+        workspace / "docs" / "guide.md",
+        "Service-backed memory keeps provenance for project guides.\n",
+    )
+    monkeypatch.chdir(workspace)
+
+    monkeypatch.setattr(sys, "argv", ["mempalace", "workspace-init"])
+    main()
+    init_output = capsys.readouterr().out
+    assert "Service Runtime Init" in init_output
+    assert (workspace / ".mempalace" / "config.yaml").exists()
+    assert (workspace / ".mempalace" / ".gitignore").exists()
+
+    monkeypatch.setattr(sys, "argv", ["mempalace", "ingest-directory"])
+    main()
+    ingest_payload = json.loads(capsys.readouterr().out)
+    assert ingest_payload["documents_written"] == 1
+    assert ingest_payload["workspace_id"] == "workspace"
+
+
+def test_ingest_chat_history_command_uses_current_directory(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    exports_dir = tmp_path / "claude-exports"
+    _write(
+        exports_dir / "chat.jsonl",
+        "\n".join(
+            [
+                '{"type":"session_meta","session_id":"chat-001"}',
+                '{"type":"event_msg","payload":{"type":"user_message","message":"Why keep retrieval provenance?"}}',
+                '{"type":"event_msg","payload":{"type":"agent_message","message":"Because we need inspectable evidence and source identifiers."}}',
+            ]
+        ),
+    )
+    monkeypatch.chdir(exports_dir)
+
+    monkeypatch.setattr(
+        sys, "argv", ["mempalace", "workspace-init", "--workspace-id", "chat_history"]
+    )
+    main()
+    capsys.readouterr()
+
+    monkeypatch.setattr(sys, "argv", ["mempalace", "ingest-chat-history"])
+    main()
+    ingest_payload = json.loads(capsys.readouterr().out)
+    assert ingest_payload["source_type"] == "conversation_files"
+    assert ingest_payload["documents_written"] == 1
+
+
+def test_service_commands_fail_fast_without_local_workspace_init(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    monkeypatch.chdir(workspace)
+    monkeypatch.setattr(sys, "argv", ["mempalace", "ingest-directory"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    output = capsys.readouterr().out
+    assert "workspace-init" in output
 
 
 def test_legacy_command_names_can_use_service_runtime(tmp_path: Path, monkeypatch, capsys) -> None:

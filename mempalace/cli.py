@@ -9,12 +9,14 @@ Two ways to ingest:
 Same palace. Same search. Different ingest strategies.
 
 Commands:
-    mempalace init <dir>                  Detect rooms from folder structure
+    mempalace init <dir>                  Detect rooms from your folder structure
+    mempalace workspace-init [dir]        Create project runtime config in the current project
     mempalace split <dir>                 Split concatenated mega-files into per-session files
     mempalace mine <dir>                  Mine project files (default)
     mempalace mine <dir> --mode convos    Mine conversation exports
     mempalace search "query"              Find anything, exact words
-    mempalace ingest-directory <dir>      Ingest via the new service-backed runtime
+    mempalace ingest-directory [dir]      Ingest via the new service-backed runtime
+    mempalace ingest-chat-history [dir]   Ingest AI chat exports via the new service-backed runtime
     mempalace ingest-source <file>        Ingest one file via the new service-backed runtime
     mempalace search-memory "query"       Search via the new service-backed runtime
     mempalace search-time-range "query"   Search via the new runtime inside a time window
@@ -35,7 +37,9 @@ Commands:
 
 Examples:
     mempalace init ~/projects/my_app
-    mempalace mine ~/projects/my_app
+    mempalace workspace-init
+    mempalace ingest-directory
+    mempalace ingest-chat-history ~/exports/claude
     mempalace mine ~/chats/claude-sessions --mode convos
     mempalace search "why did we switch to GraphQL"
     mempalace search "pricing discussion" --wing my_app --room costs
@@ -197,6 +201,12 @@ def cmd_ingest_directory(args):
     cmd_ingest_directory_service(args)
 
 
+def cmd_ingest_chat_history(args):
+    from .interfaces.cli.service_cli import cmd_ingest_chat_history_service
+
+    cmd_ingest_chat_history_service(args)
+
+
 def cmd_search_memory(args):
     from .interfaces.cli.service_cli import cmd_search_memory_service
 
@@ -279,6 +289,12 @@ def cmd_migrate_legacy(args):
     from .interfaces.cli.service_cli import cmd_migrate_legacy_service
 
     cmd_migrate_legacy_service(args)
+
+
+def cmd_workspace_init(args):
+    from .interfaces.cli.service_cli import cmd_init_project_service
+
+    cmd_init_project_service(args)
 
 
 def cmd_repair(args):
@@ -494,6 +510,28 @@ def main():
         "--yes", action="store_true", help="Auto-accept all detected entities (non-interactive)"
     )
 
+    # workspace-init
+    p_workspace_init = sub.add_parser(
+        "workspace-init",
+        help="Create project runtime config for the current project",
+    )
+    p_workspace_init.add_argument(
+        "dir",
+        nargs="?",
+        default=".",
+        help="Project directory to set up (default: current directory)",
+    )
+    p_workspace_init.add_argument(
+        "--workspace-id",
+        default=None,
+        help="Optional explicit workspace identifier for the service runtime",
+    )
+    p_workspace_init.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing local service runtime config",
+    )
+
     # mine
     p_mine = sub.add_parser("mine", help="Mine files into the palace")
     p_mine.add_argument("dir", help="Directory to mine")
@@ -668,10 +706,12 @@ def main():
 
     dispatch = {
         "init": cmd_init,
+        "workspace-init": cmd_workspace_init,
         "mine": cmd_mine,
         "split": cmd_split,
         "search": cmd_search,
         "ingest-directory": cmd_ingest_directory,
+        "ingest-chat-history": cmd_ingest_chat_history,
         "ingest-source": cmd_ingest_source,
         "search-memory": cmd_search_memory,
         "search-time-range": cmd_search_time_range,
@@ -691,7 +731,11 @@ def main():
         "repair": cmd_repair,
         "status": cmd_status,
     }
-    dispatch[args.command](args)
+    try:
+        dispatch[args.command](args)
+    except FileNotFoundError as exc:
+        print(str(exc))
+        sys.exit(1)
 
 
 if __name__ == "__main__":

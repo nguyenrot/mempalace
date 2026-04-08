@@ -5,6 +5,10 @@ from __future__ import annotations
 import argparse
 import sys
 
+from mempalace.application.project_profiles import (
+    ProjectInitResult,
+    initialize_project_runtime,
+)
 from mempalace.domain.models import (
     CompactedSessionContext,
     EvidenceTrail,
@@ -42,7 +46,12 @@ def add_service_cli_parsers(subparsers: argparse._SubParsersAction) -> None:
         "ingest-directory",
         help="Ingest a directory using the new service-backed runtime",
     )
-    ingest_parser.add_argument("dir", help="Directory to ingest")
+    ingest_parser.add_argument(
+        "dir",
+        nargs="?",
+        default=".",
+        help="Directory to ingest (default: current directory)",
+    )
     ingest_parser.add_argument(
         "--wing",
         default=None,
@@ -72,6 +81,24 @@ def add_service_cli_parsers(subparsers: argparse._SubParsersAction) -> None:
         help="Conversation extraction mode when --mode convos",
     )
     _add_runtime_args(ingest_parser)
+
+    ingest_chat_parser = subparsers.add_parser(
+        "ingest-chat-history",
+        help="Ingest AI chat exports using the service-backed runtime",
+    )
+    ingest_chat_parser.add_argument(
+        "dir",
+        nargs="?",
+        default=".",
+        help="Directory containing chat exports (default: current directory)",
+    )
+    ingest_chat_parser.add_argument(
+        "--extract",
+        choices=["exchange", "general"],
+        default="exchange",
+        help="Conversation extraction mode (default: exchange)",
+    )
+    _add_runtime_args(ingest_chat_parser)
 
     ingest_source_parser = subparsers.add_parser(
         "ingest-source",
@@ -368,6 +395,15 @@ def run_status_health_service(args: argparse.Namespace) -> dict[str, object]:
     return platform.health()
 
 
+def run_init_project_service(args: argparse.Namespace) -> ProjectInitResult:
+    """Initialize a project-scoped service runtime config."""
+    return initialize_project_runtime(
+        args.dir,
+        workspace_id=getattr(args, "workspace_id", None),
+        force=getattr(args, "force", False),
+    )
+
+
 def run_ingest_directory_service(args: argparse.Namespace) -> IngestionResult:
     """Execute a service-backed directory ingest from CLI arguments."""
     platform = build_platform(config_path=args.config, workspace_id=args.workspace)
@@ -381,6 +417,16 @@ def run_ingest_directory_service(args: argparse.Namespace) -> IngestionResult:
         wing_override=getattr(args, "wing", None),
         respect_gitignore=not getattr(args, "no_gitignore", False),
         include_ignored=include_ignored,
+    )
+
+
+def run_ingest_chat_history_service(args: argparse.Namespace) -> IngestionResult:
+    """Execute chat-history ingest using the service-backed runtime."""
+    platform = build_platform(config_path=args.config, workspace_id=args.workspace)
+    return platform.ingest_directory(
+        args.dir,
+        mode="convos",
+        extract_mode=args.extract,
     )
 
 
@@ -531,6 +577,29 @@ def render_ingestion_result(result: IngestionResult) -> str:
     return "\n".join(lines)
 
 
+def render_project_init_result(result: ProjectInitResult) -> str:
+    """Render a human-readable project initialization summary."""
+    lines = []
+    lines.append("")
+    lines.append("=" * 55)
+    lines.append("  Service Runtime Init")
+    lines.append("=" * 55)
+    lines.append(f"  Workspace:      {result.workspace_id}")
+    lines.append(f"  Project:        {result.project_dir}")
+    lines.append(f"  Local config:   {result.local_config_path}")
+    lines.append(f"  Storage dir:    {result.storage_dir}")
+    lines.append(f"  Metadata path:  {result.metadata_path}")
+    lines.append(f"  Gitignore:      {result.gitignore_path}")
+    lines.append(f"  Created:        {'yes' if result.created else 'no'}")
+    lines.append(f"  Updated:        {'yes' if result.updated else 'no'}")
+    lines.append("")
+    lines.append("  Next:")
+    lines.append("    mempalace ingest-directory")
+    lines.append("    mempalace ingest-chat-history /path/to/exports")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def render_migration_result(result: MigrationResult) -> str:
     """Render a human-readable migration summary."""
     lines = []
@@ -646,6 +715,11 @@ def cmd_ingest_directory_service(args: argparse.Namespace) -> None:
     print(dumps_json(run_ingest_directory_service(args)))
 
 
+def cmd_ingest_chat_history_service(args: argparse.Namespace) -> None:
+    """Ingest chat history and print the structured result."""
+    print(dumps_json(run_ingest_chat_history_service(args)))
+
+
 def cmd_ingest_source_service(args: argparse.Namespace) -> None:
     """Ingest one source file and print the structured result."""
     print(dumps_json(run_ingest_source_service(args)))
@@ -675,6 +749,11 @@ def cmd_fetch_document_service(args: argparse.Namespace) -> None:
 def cmd_status_health_service(args: argparse.Namespace) -> None:
     """Show health and record counts for the service-backed runtime."""
     print(dumps_json(run_status_health_service(args)))
+
+
+def cmd_init_project_service(args: argparse.Namespace) -> None:
+    """Initialize a project runtime config and print a readable summary."""
+    print(render_project_init_result(run_init_project_service(args)))
 
 
 def cmd_migrate_legacy_service(args: argparse.Namespace) -> None:

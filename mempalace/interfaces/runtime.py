@@ -6,24 +6,26 @@ import json
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime, time, timezone
 from enum import Enum
-from pathlib import Path
 from typing import Any
 
 from mempalace.api import LocalMemoryPlatform
+from mempalace.application.project_profiles import find_nearest_project_config
 from mempalace.infrastructure.settings import MemorySettings
-
-
-DEFAULT_RUNTIME_CONFIG = Path("~/.mempalace/config.yaml").expanduser()
 
 
 def load_settings(config_path: str | None = None, workspace_id: str | None = None) -> MemorySettings:
     """Load settings from YAML when present, otherwise use defaults."""
     if config_path:
         settings = MemorySettings.from_yaml(config_path)
-    elif DEFAULT_RUNTIME_CONFIG.exists():
-        settings = MemorySettings.from_yaml(DEFAULT_RUNTIME_CONFIG)
     else:
-        settings = MemorySettings()
+        local_config = find_nearest_project_config()
+        if local_config and local_config.exists():
+            settings = MemorySettings.from_yaml(local_config)
+        else:
+            raise FileNotFoundError(
+                "No local MemPalace config found. Run 'mempalace workspace-init' in the project first "
+                "or pass --config explicitly."
+            )
 
     if workspace_id:
         settings.workspace_id = workspace_id
