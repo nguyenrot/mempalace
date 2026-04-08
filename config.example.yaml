@@ -1,0 +1,67 @@
+workspace_id: default
+storage:
+  base_dir: ~/.mempalace/runtime
+  metadata_path: ~/.mempalace/runtime/metadata.sqlite3
+  vector_backend: sqlite
+segmenter:
+  max_chars: 900
+  overlap_chars: 120
+  min_chars: 80
+ingestion:
+  include_extensions:
+    - .md
+    - .txt
+    - .py
+    - .ts
+    - .tsx
+    - .js
+    - .json
+    - .yaml
+    - .yml
+    - .toml
+    - .sql
+  skip_directories:
+    - .git
+    - node_modules
+    - __pycache__
+    - .venv
+    - venv
+    - env
+    - dist
+    - build
+    - .next
+    - coverage
+    - .mempalace
+    - .ruff_cache
+    - .mypy_cache
+    - .pytest_cache
+    - .cache
+    - .tox
+    - .nox
+    - .idea
+    - .vscode
+    - .ipynb_checkpoints
+    - .eggs
+    - htmlcov
+    - target
+  skip_filenames:
+    - .gitignore
+    - package-lock.json
+  conversation_extensions:
+    - .txt
+    - .md
+    - .json
+    - .jsonl
+  project_manifest_filenames:
+    - mempalace.yaml
+    - mempalace.yml
+    - mempal.yaml
+    - mempal.yml
+  default_room_name: general
+retrieval:
+  default_limit: 5
+  keyword_weight: 0.6
+  semantic_weight: 0.4
+logging:
+  level: INFO
+  json: true
