@@ -16,6 +16,7 @@ def _scan(project_root: Path, **kwargs) -> list[str]:
     files = scan_files(
         project_root,
         include_extensions={".py", ".md", ".json"},
+        include_filenames={"Dockerfile", "Makefile"},
         skip_directories={".git", ".pytest_cache"},
         skip_filenames={".gitignore"},
         **kwargs,
@@ -44,3 +45,10 @@ def test_scan_files_can_disable_gitignore(tmp_path: Path) -> None:
     _write(tmp_path / "docs" / "guide.md", "# Guide\n")
 
     assert _scan(tmp_path, respect_gitignore=False, include_ignored=None) == ["docs/guide.md"]
+
+
+def test_scan_files_can_include_popular_filenames_without_extensions(tmp_path: Path) -> None:
+    _write(tmp_path / "Dockerfile", "FROM python:3.13\n")
+    _write(tmp_path / "Makefile", "test:\n\tpytest\n")
+
+    assert _scan(tmp_path, respect_gitignore=True, include_ignored=None) == ["Dockerfile", "Makefile"]

@@ -173,6 +173,7 @@ def scan_files(
     project_root: str | Path,
     *,
     include_extensions: set[str],
+    include_filenames: set[str],
     skip_directories: set[str],
     skip_filenames: set[str],
     respect_gitignore: bool = True,
@@ -221,7 +222,11 @@ def scan_files(
 
             if not force_include and filename in skip_filenames:
                 continue
-            if path.suffix.lower() not in include_extensions and not exact_force_include:
+            if (
+                path.suffix.lower() not in include_extensions
+                and filename not in include_filenames
+                and not exact_force_include
+            ):
                 continue
             if respect_gitignore and active_matchers and not force_include:
                 if _is_gitignored(path, active_matchers, is_dir=False):

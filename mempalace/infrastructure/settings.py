@@ -87,6 +87,28 @@ class IngestionSettings:
             "package-lock.json",
         ]
     )
+    include_filenames: list[str] = field(
+        default_factory=lambda: [
+            "Dockerfile",
+            "Containerfile",
+            "Makefile",
+            "GNUmakefile",
+            "Justfile",
+            "Procfile",
+            "Podfile",
+            "Podfile.lock",
+            "Gemfile",
+            "Gemfile.lock",
+            "Brewfile",
+            "Rakefile",
+            "Fastfile",
+            "Package.swift",
+            ".env.example",
+            ".env.sample",
+            ".env.local.example",
+            ".envrc",
+        ]
+    )
     conversation_extensions: list[str] = field(
         default_factory=lambda: [
             ".txt",

@@ -77,28 +77,55 @@ mempalace migrate-legacy ~/.mempalace/palace
 
 These commands use the refactored SQLite/FTS/vector service layer rather than the legacy direct-to-Chroma path.
 
-### CLI-first project setup
+### Per-Repo Installation
+
+The recommended model is local-per-project:
+
+- each repo has its own virtual environment
+- each repo has its own `.mempalace/`
+- each repo runs its own MCP server
+- no global shared memory is required
+
+Install inside a repository:
+
+```bash
+cd /path/to/project
+uv venv
+uv pip install git+https://github.com/nguyenrot/mempalace.git
+```
+
+Or, when developing against a local checkout:
+
+```bash
+cd /path/to/project
+uv venv
+uv pip install -e /Users/kynguyenpham/Memory
+```
+
+### CLI-first Project Setup
 
 For day-to-day usage, the new CLI no longer requires hand-editing YAML just to get started:
 
 ```bash
 cd /path/to/project
-mempalace workspace-init
-mempalace ingest-directory
+./.venv/bin/mempalace workspace-init
+./.venv/bin/mempalace ingest-directory
 ```
 
 What these do:
 
 - `mempalace workspace-init` creates a project-local runtime config at `.mempalace/config.yaml`
 - `mempalace workspace-init` also creates `.mempalace/.gitignore` so runtime data stays local and untracked
+- `mempalace workspace-init` seeds a broader developer-oriented extension list by default, including `swift`, `go`, `java`, `kt`, `rs`, `c/cpp`, `sh`, `plist`, `pbxproj`, and common web/backend formats
+- `mempalace workspace-init` also seeds common no-extension developer filenames such as `Dockerfile`, `Makefile`, `Podfile`, `Gemfile`, and `Package.swift`
 - `mempalace ingest-directory` ingests the current directory when no path is passed
 
 For chat exports:
 
 ```bash
 cd /path/to/chat-exports
-mempalace workspace-init --workspace-id myproject_chats
-mempalace ingest-chat-history
+./.venv/bin/mempalace workspace-init --workspace-id myproject_chats
+./.venv/bin/mempalace ingest-chat-history
 ```
 
 The service runtime now auto-discovers config in this order when `--config` is omitted:
@@ -108,6 +135,12 @@ The service runtime now auto-discovers config in this order when `--config` is o
 If no local project config is found, service-backed commands now fail fast and ask you to run `mempalace workspace-init`.
 
 You can still pass `--config` explicitly whenever you want to target a different workspace.
+
+If you already initialized a repo before the broader extension support was added, refresh the local config with:
+
+```bash
+./.venv/bin/mempalace workspace-init --force
+```
 
 For project ingestion, the service runtime now supports deterministic project routing:
 
@@ -141,6 +174,117 @@ The MCP server also exposes service-backed tools:
 - `mempalace_recall_episodes`
 - `mempalace_compact_session_context`
 - `mempalace_prepare_startup_context`
+
+## Per-Repo Usage Workflow
+
+For a normal development repository:
+
+```bash
+cd /path/to/project
+uv venv
+uv pip install git+https://github.com/nguyenrot/mempalace.git
+./.venv/bin/mempalace workspace-init
+./.venv/bin/mempalace ingest-directory
+./.venv/bin/mempalace extract-facts
+./.venv/bin/mempalace search-memory "authentication jwt"
+```
+
+When the codebase changes substantially:
+
+```bash
+./.venv/bin/mempalace ingest-directory
+./.venv/bin/mempalace extract-facts
+```
+
+When you also want AI chat history in the same repo memory:
+
+```bash
+./.venv/bin/mempalace ingest-chat-history /path/to/chat-exports
+```
+
+## MCP For AI IDEs And CLI Agents
+
+The service runtime is easiest to consume through MCP. The important rule is:
+
+- the MCP server must run with the repository root as its working directory
+
+That allows it to resolve `.mempalace/config.yaml` automatically for that repo.
+
+The server command is:
+
+```bash
+./.venv/bin/python -m mempalace.mcp_server
+```
+
+### Generic MCP Template
+
+Any MCP client that supports `command`, `args`, and `cwd` can use a config shaped like this:
+
+```json
+{
+  "mcpServers": {
+    "mempalace-project": {
+      "transport": "stdio",
+      "command": "./.venv/bin/python",
+      "args": ["-m", "mempalace.mcp_server"],
+      "cwd": "/path/to/project"
+    }
+  }
+}
+```
+
+### Antigravity Example
+
+Antigravity stores MCP config in a user-level file, but the server itself can still be project-local.
+
+Example:
+
+```json
+{
+  "mcpServers": {
+    "mempalace-ios": {
+      "transport": "stdio",
+      "command": "zsh",
+      "args": [
+        "-lc",
+        "cd /path/to/project && ./.venv/bin/python -m mempalace.mcp_server"
+      ]
+    }
+  }
+}
+```
+
+Antigravity CLI can also add the server:
+
+```bash
+/Users/kynguyenpham/.antigravity/antigravity/bin/antigravity --add-mcp '{"name":"mempalace-ios","transport":"stdio","command":"zsh","args":["-lc","cd /path/to/project && ./.venv/bin/python -m mempalace.mcp_server"]}'
+```
+
+### Codex / OpenAI CLI-Style Agents
+
+For tools that can launch an MCP stdio server per workspace, use the same per-repo command:
+
+```bash
+cd /path/to/project
+./.venv/bin/python -m mempalace.mcp_server
+```
+
+If the client supports MCP config files, use the generic template above with `cwd` set to the repo root.
+
+### Claude Code / Other MCP Clients
+
+If the client supports adding stdio MCP servers from the shell, point it at the repo-local Python executable:
+
+```bash
+cd /path/to/project
+./.venv/bin/python -m mempalace.mcp_server
+```
+
+The exact registration command varies by client, but the important pieces stay the same:
+
+- run the repo-local interpreter, not a global one
+- use `-m mempalace.mcp_server`
+- start it from the project root or configure `cwd` to the project root
 
 ## Legacy Migration
 

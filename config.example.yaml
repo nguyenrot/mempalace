@@ -11,15 +11,87 @@ ingestion:
   include_extensions:
     - .md
     - .txt
-    - .py
-    - .ts
-    - .tsx
-    - .js
     - .json
+    - .jsonl
     - .yaml
     - .yml
     - .toml
+    - .ini
+    - .cfg
+    - .env
     - .sql
+    - .py
+    - .pyi
+    - .ts
+    - .tsx
+    - .js
+    - .jsx
+    - .mjs
+    - .cjs
+    - .java
+    - .kt
+    - .kts
+    - .swift
+    - .go
+    - .rs
+    - .rb
+    - .php
+    - .scala
+    - .sc
+    - .sh
+    - .bash
+    - .zsh
+    - .fish
+    - .ps1
+    - .nu
+    - .c
+    - .h
+    - .cpp
+    - .cc
+    - .cxx
+    - .hpp
+    - .hh
+    - .m
+    - .mm
+    - .cs
+    - .dart
+    - .lua
+    - .proto
+    - .graphql
+    - .gql
+    - .css
+    - .scss
+    - .sass
+    - .less
+    - .html
+    - .htm
+    - .xml
+    - .plist
+    - .pbxproj
+    - .entitlements
+    - .gradle
+    - .properties
+    - .dockerignore
+    - .gitignore
+  include_filenames:
+    - Dockerfile
+    - Containerfile
+    - Makefile
+    - GNUmakefile
+    - Justfile
+    - Procfile
+    - Podfile
+    - Podfile.lock
+    - Gemfile
+    - Gemfile.lock
+    - Brewfile
+    - Rakefile
+    - Fastfile
+    - Package.swift
+    - .env.example
+    - .env.sample
+    - .env.local.example
+    - .envrc
   skip_directories:
     - .git
     - node_modules

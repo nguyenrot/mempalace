@@ -28,6 +28,16 @@ def test_initialize_project_runtime_creates_local_config_and_gitignore(tmp_path:
     payload = yaml.safe_load(Path(result.local_config_path).read_text(encoding="utf-8"))
     assert payload["workspace_id"] == "project"
     assert payload["storage"]["metadata_path"].endswith(".mempalace/runtime/metadata.sqlite3")
+    include_extensions = set(payload["ingestion"]["include_extensions"])
+    include_filenames = set(payload["ingestion"]["include_filenames"])
+    assert ".swift" in include_extensions
+    assert ".go" in include_extensions
+    assert ".ts" in include_extensions
+    assert ".py" in include_extensions
+    assert ".plist" in include_extensions
+    assert "Dockerfile" in include_filenames
+    assert "Makefile" in include_filenames
+    assert "Podfile" in include_filenames
 
 
 def test_find_nearest_project_config_searches_parents(tmp_path: Path) -> None:

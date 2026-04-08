@@ -286,6 +286,7 @@ class DirectoryIngestionService:
         return scan_files(
             root,
             include_extensions={ext.lower() for ext in self.settings.ingestion.include_extensions},
+            include_filenames=set(self.settings.ingestion.include_filenames),
             skip_directories=set(self.settings.ingestion.skip_directories),
             skip_filenames=skip_filenames,
             respect_gitignore=respect_gitignore,
