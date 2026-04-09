@@ -1,26 +1,26 @@
 [project]
-name = "phamkynguyen-mempalace"
+name = "mempalace"
 version = "0.1.0"
-description = "Give your AI a memory — mine projects and conversations into a searchable palace. No API key required."
+description = "A production-oriented local-first memory platform for AI assistants and coding agents."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = "MIT"
 authors = [
-    {name = "phamkynguyen"},
+    {name = "Kynguyen Pham"},
 ]
 keywords = [
-    "ai", "memory", "llm", "rag", "chromadb", "mcp",
-    "vector-database", "claude", "chatgpt", "embeddings",
+    "ai", "memory", "llm", "rag", "mcp", "sqlite",
+    "vector-database", "local-first", "embeddings",
+    "coding-agent", "context-manager",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Utilities",
 ]
@@ -53,7 +53,7 @@ packages = ["mempalace"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
