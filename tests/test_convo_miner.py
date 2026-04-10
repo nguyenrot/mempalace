@@ -2,6 +2,7 @@ import os
 import tempfile
 import shutil
 import chromadb
+from mempalace.compat._legacy_chroma import embed_texts
 from mempalace.convo_miner import mine_convos
 
 
@@ -20,7 +21,7 @@ def test_convo_mining():
     assert col.count() >= 2
 
     # Verify search works
-    results = col.query(query_texts=["memory persistence"], n_results=1)
+    results = col.query(query_embeddings=embed_texts(["memory persistence"]), n_results=1)
     assert len(results["documents"][0]) > 0
 
     shutil.rmtree(tmpdir)

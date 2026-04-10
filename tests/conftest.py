@@ -30,6 +30,7 @@ os.environ["HOMEPATH"] = os.path.splitdrive(_session_tmp)[1] or _session_tmp
 import chromadb  # noqa: E402
 import pytest  # noqa: E402
 
+from mempalace.compat._legacy_chroma import embed_texts  # noqa: E402
 from mempalace.config import MempalaceConfig  # noqa: E402
 from mempalace.knowledge_graph import KnowledgeGraph  # noqa: E402
 
@@ -107,6 +108,18 @@ def seeded_collection(collection):
             "Sprint planning: migrate auth to passkeys by Q3. "
             "Evaluate ChromaDB alternatives for vector search.",
         ],
+        embeddings=embed_texts(
+            [
+                "The authentication module uses JWT tokens for session management. "
+                "Tokens expire after 24 hours. Refresh tokens are stored in HttpOnly cookies.",
+                "Database migrations are handled by Alembic. We use PostgreSQL 15 "
+                "with connection pooling via pgbouncer.",
+                "The React frontend uses TanStack Query for server state management. "
+                "All API calls go through a centralized fetch wrapper.",
+                "Sprint planning: migrate auth to passkeys by Q3. "
+                "Evaluate ChromaDB alternatives for vector search.",
+            ]
+        ),
         metadatas=[
             {
                 "wing": "project",

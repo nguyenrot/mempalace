@@ -13,12 +13,18 @@ from pathlib import Path
 def _patch_mcp_server(monkeypatch, config, palace_path, kg):
     """Patch the mcp_server module globals to use test fixtures."""
     from mempalace import mcp_server
+    from mempalace.compat import mcp_server as compat_mcp
 
     assert getattr(config, "palace_path", None) == palace_path, (
         f"config.palace_path ({getattr(config, 'palace_path', None)!r}) does not match palace_path fixture ({palace_path!r})"
     )
+    # Patch both the root shim and compat module so that _get_collection
+    # (which uses compat.mcp_server._config) picks up the test config.
     monkeypatch.setattr(mcp_server, "_config", config)
-    monkeypatch.setattr(mcp_server, "_kg", kg)
+    compat_mcp._config = config
+    # Route _kg() calls through _kg_ref so tests can inject a seeded KG
+    compat_mcp._kg_ref["instance"] = kg
+    monkeypatch.setattr(mcp_server, "_kg_ref", compat_mcp._kg_ref)
 
 
 def _get_collection(palace_path, create=False):

@@ -17,8 +17,8 @@ from collections import defaultdict
 
 import chromadb
 
-from .compat._legacy_chroma import add_texts
-from .normalize import normalize
+from mempalace.compat._legacy_chroma import add_texts
+from mempalace.compat._legacy_normalize import normalize
 
 
 # File types that might contain conversations

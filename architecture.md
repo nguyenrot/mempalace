@@ -95,6 +95,36 @@ Current public surface:
 - CLI is unified around `init`, `ingest`, `search`, `status`
 - MCP uses aligned names such as `mempalace_ingest`, `mempalace_search`, `mempalace_status`
 
+## Compat Shim Table (Legacy Path vs Canonical Path)
+
+This table tells you **which file is the authoritative implementation** and **which files exist only for backward compatibility**.
+
+For users migrating from the old runtime, all legacy modules have been consolidated under the `compat/` namespace. The root-level files are thin shims that re-export from `compat/`.
+
+| Public Interface | Canonical (chính thức — đang phát triển) | Compat Shim (legacy) — chỉ dùng cho migration |
+|---|---|---|
+| **CLI entry** | `interfaces/cli/service_cli.py` | `cli.py` → thin shim → `compat/cli.py` |
+| **MCP entry** | `interfaces/mcp/service_tools.py` | `mcp_server.py` → thin shim → `compat/mcp_server.py` |
+| **High-level API** | `interfaces/api.py` (`LocalMemoryPlatform`) | `api.py` (re-export wrapper) |
+| **Config** | `infrastructure/settings.py` (`MemorySettings`, YAML) | `config.py` → shim → `compat/config.py` |
+| **Metadata store** | `infrastructure/storage/sqlite_catalog.py` | `knowledge_graph.py` → shim → `compat/knowledge_graph.py` |
+| **Vector index** | `infrastructure/vector/sqlite_index.py` | `miner.py` / `searcher.py` → shim → `compat/miner.py`, `compat/searcher.py` |
+| **Palace graph** | *(canonical không dùng palace metaphor)* | `palace_graph.py` → shim → `compat/palace_graph.py` |
+| **Memory layers** | `application/context.py` | `layers.py` → shim → `compat/layers.py` |
+| **AAAK dialect** | *(canonical không dùng AAAK)* | `dialect.py` → shim → `compat/dialect.py` |
+| **Entity registry** | *(canonical dùng domain models)* | `entity_registry.py` / `entity_detector.py` → shims → `compat/` |
+| **Onboarding** | *(canonical không còn onboarding CLI)* | `onboarding.py` / `spellcheck.py` / `split_mega_files.py` → shims → `compat/` |
+| **Conversation mining** | `application/conversation_ingestion.py` | `convo_miner.py` / `normalize.py` → shims → `compat/` |
+| **General extraction** | *(canonical dùng fact_extraction)* | `general_extractor.py` → shim → `compat/general_extractor.py` |
+| **Room detection** | *(canonical dùng project_classification)* | `room_detector_local.py` → shim → `compat/room_detector_local.py` |
+
+**How to read this table:**
+
+- **Canonical column** = where new development happens. When you add a feature, it goes here.
+- **Compat Shim column** = kept only so existing users can migrate (`mempalace migrate-legacy`) or run `mempalace legacy-*` commands. They will not receive new features.
+- The root-level shims (`cli.py`, `mcp_server.py`, `config.py`, `api.py`) exist purely to maintain the original entry points without breaking existing code. All actual logic lives inside `compat/`.
+- **Import path change**: external code that used to `from mempalace.miner import mine` should migrate to `from mempalace.compat.miner import mine` or `from mempalace.compat.cli import cmd_legacy_mine` for CLI commands.
+
 ### Application
 
 Use-case orchestration lives in:
@@ -375,31 +405,67 @@ This makes the system useful for agent workflows without overclaiming semantic p
 
 ## CLI And MCP Surfaces
 
-### Primary CLI
+### Primary CLI (Canonical)
 
-Current primary commands:
+All commands delegate to the service runtime:
 
-- `mempalace init`
-- `mempalace ingest`
-- `mempalace ingest-chat-history`
-- `mempalace search`
-- `mempalace status`
+| Command | Handler |
+|---|---|
+| `mempalace init` | `service_cli.py` → `cmd_workspace_init()` |
+| `mempalace ingest` | `service_cli.py` → `cmd_ingest_directory()` |
+| `mempalace ingest-chat-history` | `service_cli.py` → `cmd_ingest_chat_history()` |
+| `mempalace search` | `service_cli.py` → `cmd_search_memory()` |
+| `mempalace status` | `service_cli.py` → `cmd_status_health()` |
+| `mempalace fetch-document` | `service_cli.py` → `cmd_fetch_document()` |
+| `mempalace fetch-evidence` | `service_cli.py` → `cmd_fetch_evidence()` |
+| `mempalace extract-facts` | `service_cli.py` → `cmd_extract_facts()` |
+| `mempalace query-facts` | `service_cli.py` → `cmd_query_facts()` |
+| `mempalace reindex` | `service_cli.py` → `cmd_reindex()` |
+| `mempalace recall-episodes` | `service_cli.py` → `cmd_recall_episodes()` |
+| `mempalace compact-session-context` | `service_cli.py` → `cmd_compact_session_context()` |
+| `mempalace prepare-startup-context` | `service_cli.py` → `cmd_prepare_startup_context()` |
+| `mempalace migrate-legacy` | `service_cli.py` → `cmd_migrate_legacy()` |
 
-Additional operator commands:
+### Legacy CLI (Compatibility Shim)
 
-- `mempalace fetch-document`
-- `mempalace fetch-evidence`
-- `mempalace extract-facts`
-- `mempalace query-facts`
-- `mempalace reindex`
-- `mempalace recall-episodes`
-- `mempalace compact-session-context`
-- `mempalace prepare-startup-context`
-- `mempalace migrate-legacy`
+These commands exist only for users transitioning from the old runtime. They use `cli.py`'s dispatcher → `cmd_legacy_*` helpers:
+
+```bash
+mempalace legacy-init <dir>
+mempalace legacy-mine <dir>
+mempalace legacy-search "query"
+mempalace legacy-status
+```
+
+They will **not** receive new features and may be removed in a future major version.
 
 ### MCP Tools
 
-The MCP server exposes the same runtime semantics with names aligned to the CLI:
+### MCP Tools (Canonical — visible to agents)
+
+The MCP server exposes service-runtime tools with names aligned to CLI commands. All tools listed in `MCP_VISIBLE_TOOL_NAMES`:
+
+| Tool | Handler |
+|---|---|
+| `mempalace_status` | `tool_status_health_service()` |
+| `mempalace_ingest` | `tool_ingest_directory_service()` |
+| `mempalace_ingest_source` | `tool_ingest_directory_service()` (alias) |
+| `mempalace_search` | `tool_search_memory_service()` |
+| `mempalace_search_time_range` | `tool_search_time_range_service()` |
+| `mempalace_explain_retrieval` | `tool_explain_retrieval()` |
+| `mempalace_fetch_document` | `tool_fetch_document()` |
+| `mempalace_fetch_evidence` | `tool_fetch_evidence()` |
+| `mempalace_extract_facts` | `tool_extract_facts()` |
+| `mempalace_query_facts` | `tool_query_facts()` |
+| `mempalace_reindex` | `tool_reindex()` |
+| `mempalace_recall_episodes` | `tool_recall_episodes()` |
+| `mempalace_compact_session_context` | `tool_compact_session_context()` |
+| `mempalace_prepare_startup_context` | `tool_prepare_startup_context()` |
+| `mempalace_migrate_legacy` | `tool_migrate_legacy()` |
+
+### MCP Tools (Legacy — hidden)
+
+Legacy tools (ChromaDB-backed) are defined in `mcp_server.py` but are **not listed in `MCP_VISIBLE_TOOL_NAMES`** and are not exposed to agents. They exist so that `tool_search()` can still switch to legacy runtime via `runtime="legacy"` during migration:
 
 - `mempalace_status`
 - `mempalace_ingest`
@@ -491,8 +557,61 @@ Current branch limitations:
 
 - the vector backend is deterministic and local, not production-grade semantic ranking
 - the structured memory layer is still simpler than a full graph model
-- legacy modules still exist for compatibility and migration
+- legacy compat modules still exist under `compat/` for migration — no new features are added there
 - hosted deployment, Postgres, and alternative vector backends are not yet first-class runtime options
+
+## Legacy Compat Namespace (`compat/`)
+
+The `compat/` directory isolates all legacy modules from the canonical runtime. This prevents accidental use of old code paths in new feature development and makes the codebase easier to navigate.
+
+### Compat Directory Layout
+
+```text
+mempalace/
+  compat/                        ← Legacy code, no new development
+    _legacy_config.py          ← Actual legacy config implementation
+    _legacy_knowledge_graph.py
+    _legacy_palace_graph.py
+    _legacy_miner.py
+    _legacy_searcher.py
+    _legacy_layers.py
+    _legacy_dialect.py
+    _legacy_convo_miner.py
+    _legacy_normalize.py
+    _legacy_entity_registry.py
+    _legacy_entity_detector.py
+    _legacy_general_extractor.py
+    _legacy_onboarding.py
+    _legacy_spellcheck.py
+    _legacy_split_mega_files.py
+    _legacy_room_detector.py
+    config.py                   ← Thin shim re-exporting _legacy_config
+    knowledge_graph.py          ← Thin shim re-exporting _legacy_knowledge_graph
+    palace_graph.py             ← Thin shim re-exporting _legacy_palace_graph
+    miner.py                    ← Thin shim re-exporting _legacy_miner
+    searcher.py                ← Thin shim re-exporting _legacy_searcher
+    layers.py                  ← Thin shim re-exporting _legacy_layers
+    dialect.py                  ← Thin shim re-exporting _legacy_dialect
+    convo_miner.py             ← Thin shim re-exporting _legacy_convo_miner
+    normalize.py               ← Thin shim re-exporting _legacy_normalize
+    entity_registry.py          ← Thin shim re-exporting _legacy_entity_registry
+    entity_detector.py         ← Thin shim re-exporting _legacy_entity_detector
+    general_extractor.py        ← Thin shim re-exporting _legacy_general_extractor
+    onboarding.py              ← Thin shim re-exporting _legacy_onboarding
+    spellcheck.py              ← Thin shim re-exporting _legacy_spellcheck
+    split_mega_files.py         ← Thin shim re-exporting _legacy_split_mega_files
+    room_detector_local.py     ← Thin shim re-exporting _legacy_room_detector
+    cli.py                     ← Legacy CLI command handlers (not in service_cli)
+    mcp_server.py              ← Legacy MCP tools (not in service_tools)
+```
+
+### Design Rationale
+
+- Every compat module is either a thin shim (`*.py`) or the actual implementation (`_legacy_*.py`).
+- Thin shims exist only to maintain backward-compatible import paths for code that still references `from mempalace.X import ...`.
+- All actual implementation lives in `_legacy_*.py` files so other compat modules can import from them using the full `mempalace.compat._legacy_X` path.
+- The root-level files (`cli.py`, `mcp_server.py`, `config.py`, `api.py`) are thin shims that delegate to `compat/`. They keep the original entry points working without duplication.
+- New code must never import from `compat/_legacy_*.py` — those are private to the compat namespace.
 
 ## Target Direction
 
@@ -504,6 +623,7 @@ What is already true:
 - MCP and CLI use aligned names
 - retrieval is provenance-aware
 - storage is no longer hard-coded to Chroma in the main runtime
+- legacy modules are isolated under `compat/` — canonical vs. legacy boundary is now explicit in the package layout
 
 What still remains to reach the longer-term target:
 
@@ -512,3 +632,4 @@ What still remains to reach the longer-term target:
 - more capable structured relation modeling
 - optional hosted and multi-user deployment support
 - stronger benchmark and operator documentation around larger datasets
+- removal of legacy compat once migration tooling is stable

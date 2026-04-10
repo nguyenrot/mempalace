@@ -1,9 +1,13 @@
-#!/usr/bin/env python3
 """
 searcher.py — Find anything. Exact words.
+========================================
 
 Semantic search against the palace.
 Returns verbatim text — the actual words, never summaries.
+
+This file lives in compat/ because it belongs to the legacy ChromaDB-backed
+runtime. The canonical runtime uses RetrievalService with SQLite FTS5 and
+deterministic vector search.
 """
 
 import logging
@@ -11,7 +15,7 @@ from pathlib import Path
 
 import chromadb
 
-from .compat._legacy_chroma import query_text
+from mempalace.compat._legacy_chroma import query_text
 
 logger = logging.getLogger("mempalace_mcp")
 
@@ -21,10 +25,7 @@ class SearchError(Exception):
 
 
 def search(query: str, palace_path: str, wing: str = None, room: str = None, n_results: int = 5):
-    """
-    Search the palace. Returns verbatim drawer content.
-    Optionally filter by wing (project) or room (aspect).
-    """
+    """Search the palace. Returns verbatim drawer content."""
     try:
         client = chromadb.PersistentClient(path=palace_path)
         col = client.get_collection("mempalace_drawers")
@@ -33,7 +34,6 @@ def search(query: str, palace_path: str, wing: str = None, room: str = None, n_r
         print("  Run: mempalace init <dir> then mempalace mine <dir>")
         raise SearchError(f"No palace found at {palace_path}")
 
-    # Build where filter
     where = {}
     if wing and room:
         where = {"$and": [{"wing": wing}, {"room": room}]}
@@ -50,7 +50,6 @@ def search(query: str, palace_path: str, wing: str = None, room: str = None, n_r
             where=where or None,
             include=["documents", "metadatas", "distances"],
         )
-
     except Exception as e:
         print(f"\n  Search error: {e}")
         raise SearchError(f"Search error: {e}") from e
@@ -81,33 +80,24 @@ def search(query: str, palace_path: str, wing: str = None, room: str = None, n_r
         print(f"      Source: {source}")
         print(f"      Match:  {similarity}")
         print()
-        # Print the verbatim text, indented
         for line in doc.strip().split("\n"):
             print(f"      {line}")
         print()
         print(f"  {'─' * 56}")
-
     print()
 
 
 def search_memories(
     query: str, palace_path: str, wing: str = None, room: str = None, n_results: int = 5
 ) -> dict:
-    """
-    Programmatic search — returns a dict instead of printing.
-    Used by the MCP server and other callers that need data.
-    """
+    """Programmatic search — returns a dict instead of printing."""
     try:
         client = chromadb.PersistentClient(path=palace_path)
         col = client.get_collection("mempalace_drawers")
     except Exception as e:
         logger.error("No palace found at %s: %s", palace_path, e)
-        return {
-            "error": "No palace found",
-            "hint": "Run: mempalace init <dir> && mempalace mine <dir>",
-        }
+        return {"error": "No palace found", "hint": "Run: mempalace init <dir> && mempalace mine <dir>"}
 
-    # Build where filter
     where = {}
     if wing and room:
         where = {"$and": [{"wing": wing}, {"room": room}]}
@@ -133,18 +123,12 @@ def search_memories(
 
     hits = []
     for doc, meta, dist in zip(docs, metas, dists):
-        hits.append(
-            {
-                "text": doc,
-                "wing": meta.get("wing", "unknown"),
-                "room": meta.get("room", "unknown"),
-                "source_file": Path(meta.get("source_file", "?")).name,
-                "similarity": round(1 - dist, 3),
-            }
-        )
+        hits.append({
+            "text": doc,
+            "wing": meta.get("wing", "unknown"),
+            "room": meta.get("room", "unknown"),
+            "source_file": Path(meta.get("source_file", "?")).name,
+            "similarity": round(1 - dist, 3),
+        })
 
-    return {
-        "query": query,
-        "filters": {"wing": wing, "room": room},
-        "results": hits,
-    }
+    return {"query": query, "filters": {"wing": wing, "room": room}, "results": hits}
