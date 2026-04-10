@@ -99,7 +99,7 @@ Or, when developing against a local checkout:
 ```bash
 cd /path/to/project
 uv venv
-uv pip install -e /Users/kynguyenpham/Memory
+uv pip install -e /path/to/local/mempalace-checkout
 ```
 
 If you prefer `pyenv`, that works too:
@@ -117,7 +117,7 @@ pip install git+https://github.com/nguyenrot/mempalace.git
 Or against a local checkout:
 
 ```bash
-pip install -e /Users/kynguyenpham/Memory
+pip install -e /path/to/local/mempalace-checkout
 ```
 
 Recommended Python versions:
@@ -297,7 +297,7 @@ Example:
 Antigravity CLI can also add the server:
 
 ```bash
-/Users/kynguyenpham/.antigravity/antigravity/bin/antigravity --add-mcp '{"name":"mempalace-ios","transport":"stdio","command":"zsh","args":["-lc","cd /path/to/project && ./.venv/bin/python -m mempalace.mcp_server"]}'
+<path-to-antigravity> --add-mcp '{"name":"mempalace-ios","transport":"stdio","command":"zsh","args":["-lc","cd /path/to/project && ./.venv/bin/python -m mempalace.mcp_server"]}'
 ```
 
 ### Codex / OpenAI CLI-Style Agents

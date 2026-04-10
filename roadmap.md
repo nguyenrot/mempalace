@@ -78,9 +78,9 @@ Goals:
 
 Deliverables already present:
 
-- [`architecture.md`](/Users/kynguyenpham/Memory/architecture.md)
-- [`roadmap.md`](/Users/kynguyenpham/Memory/roadmap.md)
-- [`migration.md`](/Users/kynguyenpham/Memory/migration.md)
+- [`architecture.md`](architecture.md)
+- [`roadmap.md`](roadmap.md)
+- [`migration.md`](migration.md)
 
 Exit criteria met:
 

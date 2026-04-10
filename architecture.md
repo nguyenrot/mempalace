@@ -79,9 +79,9 @@ The codebase keeps legacy modules for compatibility, but the main service runtim
 
 Public entrypoints:
 
-- [`mempalace/cli.py`](/Users/kynguyenpham/Memory/mempalace/cli.py)
-- [`mempalace/mcp_server.py`](/Users/kynguyenpham/Memory/mempalace/mcp_server.py)
-- [`mempalace/interfaces/api.py`](/Users/kynguyenpham/Memory/mempalace/interfaces/api.py)
+- [`mempalace/cli.py`](mempalace/cli.py)
+- [`mempalace/mcp_server.py`](mempalace/mcp_server.py)
+- [`mempalace/interfaces/api.py`](mempalace/interfaces/api.py)
 
 Responsibilities:
 
@@ -129,17 +129,17 @@ For users migrating from the old runtime, all legacy modules have been consolida
 
 Use-case orchestration lives in:
 
-- [`mempalace/application/ingestion.py`](/Users/kynguyenpham/Memory/mempalace/application/ingestion.py)
-- [`mempalace/application/conversation_ingestion.py`](/Users/kynguyenpham/Memory/mempalace/application/conversation_ingestion.py)
-- [`mempalace/application/retrieval.py`](/Users/kynguyenpham/Memory/mempalace/application/retrieval.py)
-- [`mempalace/application/fact_extraction.py`](/Users/kynguyenpham/Memory/mempalace/application/fact_extraction.py)
-- [`mempalace/application/context.py`](/Users/kynguyenpham/Memory/mempalace/application/context.py)
-- [`mempalace/application/reindexing.py`](/Users/kynguyenpham/Memory/mempalace/application/reindexing.py)
-- [`mempalace/application/legacy_migration.py`](/Users/kynguyenpham/Memory/mempalace/application/legacy_migration.py)
-- [`mempalace/application/project_profiles.py`](/Users/kynguyenpham/Memory/mempalace/application/project_profiles.py)
-- [`mempalace/application/project_classification.py`](/Users/kynguyenpham/Memory/mempalace/application/project_classification.py)
-- [`mempalace/application/filesystem_scan.py`](/Users/kynguyenpham/Memory/mempalace/application/filesystem_scan.py)
-- [`mempalace/application/segmentation.py`](/Users/kynguyenpham/Memory/mempalace/application/segmentation.py)
+- [`mempalace/application/ingestion.py`](mempalace/application/ingestion.py)
+- [`mempalace/application/conversation_ingestion.py`](mempalace/application/conversation_ingestion.py)
+- [`mempalace/application/retrieval.py`](mempalace/application/retrieval.py)
+- [`mempalace/application/fact_extraction.py`](mempalace/application/fact_extraction.py)
+- [`mempalace/application/context.py`](mempalace/application/context.py)
+- [`mempalace/application/reindexing.py`](mempalace/application/reindexing.py)
+- [`mempalace/application/legacy_migration.py`](mempalace/application/legacy_migration.py)
+- [`mempalace/application/project_profiles.py`](mempalace/application/project_profiles.py)
+- [`mempalace/application/project_classification.py`](mempalace/application/project_classification.py)
+- [`mempalace/application/filesystem_scan.py`](mempalace/application/filesystem_scan.py)
+- [`mempalace/application/segmentation.py`](mempalace/application/segmentation.py)
 
 Responsibilities:
 
@@ -157,7 +157,7 @@ Responsibilities:
 
 Canonical models live in:
 
-- [`mempalace/domain/models.py`](/Users/kynguyenpham/Memory/mempalace/domain/models.py)
+- [`mempalace/domain/models.py`](mempalace/domain/models.py)
 
 The runtime avoids metaphorical names and uses conventional records:
 
@@ -178,11 +178,11 @@ The runtime avoids metaphorical names and uses conventional records:
 
 Concrete adapters live in:
 
-- [`mempalace/infrastructure/settings.py`](/Users/kynguyenpham/Memory/mempalace/infrastructure/settings.py)
-- [`mempalace/infrastructure/logging.py`](/Users/kynguyenpham/Memory/mempalace/infrastructure/logging.py)
-- [`mempalace/infrastructure/storage/sqlite_catalog.py`](/Users/kynguyenpham/Memory/mempalace/infrastructure/storage/sqlite_catalog.py)
-- [`mempalace/infrastructure/vector/hashing.py`](/Users/kynguyenpham/Memory/mempalace/infrastructure/vector/hashing.py)
-- [`mempalace/infrastructure/vector/sqlite_index.py`](/Users/kynguyenpham/Memory/mempalace/infrastructure/vector/sqlite_index.py)
+- [`mempalace/infrastructure/settings.py`](mempalace/infrastructure/settings.py)
+- [`mempalace/infrastructure/logging.py`](mempalace/infrastructure/logging.py)
+- [`mempalace/infrastructure/storage/sqlite_catalog.py`](mempalace/infrastructure/storage/sqlite_catalog.py)
+- [`mempalace/infrastructure/vector/hashing.py`](mempalace/infrastructure/vector/hashing.py)
+- [`mempalace/infrastructure/vector/sqlite_index.py`](mempalace/infrastructure/vector/sqlite_index.py)
 
 Responsibilities:
 
@@ -506,8 +506,8 @@ Important identifiers:
 
 Logging configuration is controlled through:
 
-- [`config.example.yaml`](/Users/kynguyenpham/Memory/config.example.yaml)
-- [`mempalace/infrastructure/settings.py`](/Users/kynguyenpham/Memory/mempalace/infrastructure/settings.py)
+- [`config.example.yaml`](config.example.yaml)
+- [`mempalace/infrastructure/settings.py`](mempalace/infrastructure/settings.py)
 
 ## Operational Model
 
