@@ -1,12 +1,12 @@
 [project]
 name = "mempalace"
 version = "0.1.0"
-description = "A production-oriented local-first memory platform for AI assistants and coding agents."
+description = "A local-first memory platform for AI assistants and coding agents with persistent retrieval, provenance, and MCP tooling."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [
-    {name = "Kynguyen Pham"},
+    {name = "phamkynguyen", email = "phamkynguyen753@gmail.com"},
 ]
 keywords = [
     "ai", "memory", "llm", "rag", "mcp", "sqlite",
@@ -17,11 +17,13 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Utilities",
 ]
 dependencies = [
@@ -30,9 +32,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/nguyenrot/mempalace"
-Repository = "https://github.com/nguyenrot/mempalace"
-"Bug Tracker" = "https://github.com/nguyenrot/mempalace/issues"
+Homepage = "https://github.com/phamkynguyen/mempalace"
+Repository = "https://github.com/phamkynguyen/mempalace"
+"Bug Tracker" = "https://github.com/phamkynguyen/mempalace/issues"
 
 [project.scripts]
 mempalace = "mempalace:main"
