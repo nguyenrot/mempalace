@@ -122,7 +122,7 @@ For users migrating from the old runtime, all legacy modules have been consolida
 
 - **Canonical column** = where new development happens. When you add a feature, it goes here.
 - **Compat Shim column** = kept only so existing users can migrate (`mempalace migrate-legacy`) or run `mempalace legacy-*` commands. They will not receive new features.
-- The root-level shims (`cli.py`, `mcp_server.py`, `config.py`, `api.py`) exist purely to maintain the original entry points without breaking existing code. All actual logic lives inside `compat/`.
+- The root-level shims (`cli.py`, `mcp_server.py`, `config.py`, `api.py`) preserve the original entry points without breaking existing code. They delegate to either canonical service entrypoints or legacy `compat/` modules as appropriate.
 - **Import path change**: external code that used to `from mempalace.miner import mine` should migrate to `from mempalace.compat.miner import mine` or `from mempalace.compat.cli import cmd_legacy_mine` for CLI commands.
 
 ### Application
