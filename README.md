@@ -31,6 +31,31 @@ The new direction starts with:
 - service-layer ingestion and retrieval flows
 - structured logging
 
+## Canonical Public API
+
+For new users and new integrations, the canonical entrypoints are:
+
+- CLI canonical: `mempalace ...`
+- MCP canonical: `python -m mempalace.mcp_server`
+- Python API canonical: `mempalace.interfaces.api.LocalMemoryPlatform`
+- `compat/` is for migration and backward compatibility, not new development
+
+## Stable Vs Experimental
+
+- Stable now: `init`, `ingest`, `search`, `status`, `migrate-legacy`
+- Usable but evolving: fact extraction, episode recall, compact/startup context
+- Future: alternative vector backends, hosted mode, Postgres-backed storage
+
+## Retrieval Expectations
+
+The current service runtime provides:
+
+- SQLite metadata storage
+- FTS-backed keyword retrieval
+- a deterministic local vector path for conservative semantic matching
+
+This is intentionally inspectable and offline-friendly. It supports semantic retrieval, but it is not positioned as a state-of-the-art production reranker yet.
+
 ## Docs
 
 - [Architecture audit and target design](./architecture.md)
@@ -75,7 +100,7 @@ mempalace status
 mempalace migrate-legacy ~/.mempalace/palace
 ```
 
-These commands use the refactored SQLite/FTS/vector service layer. Older names such as `workspace-init`, `ingest-directory`, `search-memory`, and `status-health` still work as compatibility aliases, but they are no longer the primary interface.
+These commands use the refactored SQLite/FTS service layer plus a conservative local vector backend for semantic matching. Older names such as `workspace-init`, `ingest-directory`, `search-memory`, and `status-health` still work as compatibility aliases, but they are no longer the primary interface.
 
 ### Per-Repo Installation
 
