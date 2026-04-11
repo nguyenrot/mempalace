@@ -1,429 +1,215 @@
-# MemPalace
+# MemPalace 🧠
 
-MemPalace is evolving from a single-package local memory tool into a production-oriented memory platform for AI assistants and coding agents.
+**A local-first memory platform for AI assistants and coding agents.**
 
-The repository currently contains two tracks:
+Give your AI persistent memory — no API keys, no cloud, no vendor lock-in. MemPalace stores and retrieves project context using semantic search, backed by SQLite + FTS5.
 
-- Legacy modules that power the existing CLI, Chroma-backed indexing, and MCP tools.
-- A new layered service core for predictable ingestion, inspectable retrieval, and long-term maintainability.
+[![CI](https://github.com/nguyenrot/mempalace/actions/workflows/ci.yml/badge.svg)](https://github.com/nguyenrot/mempalace/actions)
+[![PyPI](https://img.shields.io/pypi/v/mempalace)](https://pypi.org/project/mempalace/)
+[![Python](https://img.shields.io/pypi/pyversions/mempalace)](https://pypi.org/project/mempalace/)
+[![License](https://img.shields.io/github/license/nguyenrot/mempalace)](LICENSE)
 
-The goal is not a benchmark demo. The goal is a local-first memory operating layer that a normal backend engineer can understand, test, debug, and extend.
+---
 
-## Principles
-
-- Preserve raw source data whenever possible.
-- Keep ingestion, indexing, extraction, and retrieval as separate concerns.
-- Make storage backends swappable.
-- Make retrieval paths explainable and provenance-rich.
-- Make write paths observable and idempotent.
-- Minimize hidden LLM-dependent behavior.
-
-## Repository Status
-
-The original implementation is still present and usable. The current refactor introduces a new architecture alongside it so the project can migrate incrementally instead of via a risky rewrite.
-
-The new direction starts with:
-
-- typed domain models
-- explicit storage interfaces
-- SQLite-backed metadata and FTS for local mode
-- a deterministic local embedding path for tests and offline operation
-- service-layer ingestion and retrieval flows
-- structured logging
-
-## Canonical Public API
-
-For new users and new integrations, the canonical entrypoints are:
-
-- CLI canonical: `mempalace ...`
-- MCP canonical: `python -m mempalace.mcp_server`
-- Python API canonical: `mempalace.interfaces.api.LocalMemoryPlatform`
-- `compat/` is for migration and backward compatibility, not new development
-
-## Stable Vs Experimental
-
-- Stable now: `init`, `ingest`, `search`, `status`, `migrate-legacy`
-- Usable but evolving: fact extraction, episode recall, compact/startup context
-- Future: alternative vector backends, hosted mode, Postgres-backed storage
-
-## Retrieval Expectations
-
-The current service runtime provides:
-
-- SQLite metadata storage
-- FTS-backed keyword retrieval
-- a deterministic local vector path for conservative semantic matching
-
-This is intentionally inspectable and offline-friendly. It supports semantic retrieval, but it is not positioned as a state-of-the-art production reranker yet.
-
-## Docs
-
-- [Architecture audit and target design](./architecture.md)
-- [Phased roadmap](./roadmap.md)
-- [Migration notes](./migration.md)
-- [Example configuration](./config.example.yaml)
-
-## Current Package Layout
-
-The refactor keeps the existing `mempalace/` package for compatibility and adds cleaner internal layers under it:
-
-```text
-mempalace/
-  domain/
-  application/
-  infrastructure/
-  interfaces/
-```
-
-The long-term target is documented in [architecture.md](./architecture.md). The legacy flat modules remain in place until the new service core can absorb their behavior with acceptable compatibility shims.
-
-## CLI Commands
-
-The primary CLI now follows a single project-local flow:
+## ⚡ Quick Start
 
 ```bash
+# Install
+pip install mempalace
+
+# (Optional) Enable semantic search — highly recommended
+pip install mempalace[embeddings]
+
+# Initialize in your project
+cd your-project/
 mempalace init
-mempalace ingest
-mempalace ingest-chat-history /path/to/chats
-mempalace search "jwt refresh tokens"
-mempalace search-time-range "jwt" --start-time 2025-01-01 --end-time 2025-12-31
-mempalace explain-retrieval "jwt provenance"
-mempalace fetch-document <document_id>
-mempalace fetch-evidence --fact-id <fact_id>
-mempalace extract-facts
-mempalace query-facts "JWT" --predicate uses
-mempalace reindex
-mempalace recall-episodes "provenance"
-mempalace compact-session-context "jwt provenance"
-mempalace prepare-startup-context "jwt provenance" --agent-name codex
-mempalace status
-mempalace migrate-legacy ~/.mempalace/palace
+
+# Ingest your codebase
+mempalace ingest .
+
+# Search your memory
+mempalace search "authentication JWT"
 ```
 
-These commands use the refactored SQLite/FTS service layer plus a conservative local vector backend for semantic matching. Older names such as `workspace-init`, `ingest-directory`, `search-memory`, and `status-health` still work as compatibility aliases, but they are no longer the primary interface.
+## 🔌 MCP Setup
 
-### Per-Repo Installation
+MemPalace works as an [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) server, giving AI assistants like Claude, Gemini, and Cursor persistent memory.
 
-The recommended model is local-per-project:
+### Gemini / Antigravity
 
-- each repo has its own virtual environment
-- each repo has its own `.mempalace/`
-- each repo runs its own MCP server
-- no global shared memory is required
-
-Install inside a repository with `uv`:
-
-```bash
-cd /path/to/project
-uv venv
-uv pip install git+https://github.com/nguyenrot/mempalace.git
-```
-
-Or, when developing against a local checkout:
-
-```bash
-cd /path/to/project
-uv venv
-uv pip install -e /path/to/local/mempalace-checkout
-```
-
-If you prefer `pyenv`, that works too:
-
-```bash
-cd /path/to/project
-pyenv install 3.13.5
-pyenv local 3.13.5
-python -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install git+https://github.com/nguyenrot/mempalace.git
-```
-
-Or against a local checkout:
-
-```bash
-pip install -e /path/to/local/mempalace-checkout
-```
-
-Recommended Python versions:
-
-- `3.11.x`
-- `3.13.x`
-
-Python `3.9` is no longer a good default for this project because upstream runtime dependencies such as `onnxruntime` do not consistently ship compatible wheels there anymore.
-
-### CLI-first Project Setup
-
-For day-to-day usage, the new CLI no longer requires hand-editing YAML just to get started:
-
-```bash
-cd /path/to/project
-./.venv/bin/mempalace init
-./.venv/bin/mempalace ingest
-```
-
-What these do:
-
-- `mempalace init` creates a project-local runtime config at `.mempalace/config.yaml`
-- `mempalace init` also creates `.mempalace/.gitignore` so runtime data stays local and untracked
-- `mempalace init` seeds a broader developer-oriented extension list by default, including `swift`, `go`, `java`, `kt`, `rs`, `c/cpp`, `sh`, `plist`, `pbxproj`, and common web/backend formats
-- `mempalace init` also seeds common no-extension developer filenames such as `Dockerfile`, `Makefile`, `Podfile`, `Gemfile`, and `Package.swift`
-- `mempalace ingest` ingests the current directory when no path is passed
-
-For chat exports:
-
-```bash
-cd /path/to/chat-exports
-./.venv/bin/mempalace init --workspace-id myproject_chats
-./.venv/bin/mempalace ingest-chat-history
-```
-
-The service runtime now auto-discovers config in this order when `--config` is omitted:
-
-1. a project-local `.mempalace/config.yaml` in the current directory or a parent directory
-
-If no local project config is found, service-backed commands now fail fast and ask you to run `mempalace init`.
-
-You can still pass `--config` explicitly whenever you want to target a different workspace.
-
-If you already initialized a repo before the broader extension support was added, refresh the local config with:
-
-```bash
-./.venv/bin/mempalace init --force
-```
-
-For project ingestion, the service runtime now supports deterministic project routing:
-
-- if a project contains `mempalace.yaml`, the runtime reads `wing` and `rooms`
-- room assignment follows a predictable order: path match, filename match, then content keyword scoring
-- assigned `wing`, `room`, `relative_path`, and classification strategy are stored in document and segment metadata
-
-Compatibility aliases still work:
-
-```bash
-mempalace workspace-init
-mempalace ingest-directory /path/to/workspace --config ./config.yaml
-mempalace search-memory "jwt refresh tokens" --config ./config.yaml --wing notes --room planning
-mempalace status-health --config ./config.yaml
-```
-
-The MCP server also exposes service-backed tools with names aligned to the CLI:
-
-- `mempalace_status`
-- `mempalace_ingest`
-- `mempalace_ingest_source`
-- `mempalace_migrate_legacy`
-- `mempalace_extract_facts`
-- `mempalace_query_facts`
-- `mempalace_search`
-- `mempalace_search_time_range`
-- `mempalace_explain_retrieval`
-- `mempalace_fetch_document`
-- `mempalace_fetch_evidence`
-- `mempalace_reindex`
-- `mempalace_recall_episodes`
-- `mempalace_compact_session_context`
-- `mempalace_prepare_startup_context`
-
-## Per-Repo Usage Workflow
-
-For a normal development repository:
-
-```bash
-cd /path/to/project
-uv venv
-uv pip install git+https://github.com/nguyenrot/mempalace.git
-./.venv/bin/mempalace init
-./.venv/bin/mempalace ingest
-./.venv/bin/mempalace extract-facts
-./.venv/bin/mempalace search "authentication jwt"
-```
-
-The same flow with `pyenv` looks like this:
-
-```bash
-cd /path/to/project
-pyenv local 3.13.5
-python -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install git+https://github.com/nguyenrot/mempalace.git
-./.venv/bin/mempalace init
-./.venv/bin/mempalace ingest
-./.venv/bin/mempalace extract-facts
-./.venv/bin/mempalace search "authentication jwt"
-```
-
-When the codebase changes substantially:
-
-```bash
-./.venv/bin/mempalace ingest
-./.venv/bin/mempalace extract-facts
-```
-
-When you also want AI chat history in the same repo memory:
-
-```bash
-./.venv/bin/mempalace ingest-chat-history /path/to/chat-exports
-```
-
-## MCP For AI IDEs And CLI Agents
-
-The service runtime is easiest to consume through MCP. The important rule is:
-
-- the MCP server must run with the repository root as its working directory
-
-That allows it to resolve `.mempalace/config.yaml` automatically for that repo.
-
-The server command is:
-
-```bash
-./.venv/bin/python -m mempalace.mcp_server
-```
-
-### Generic MCP Template
-
-Any MCP client that supports `command`, `args`, and `cwd` can use a config shaped like this:
+Add to `~/.gemini/antigravity/mcp_config.json`:
 
 ```json
 {
   "mcpServers": {
     "mempalace-project": {
-      "transport": "stdio",
-      "command": "./.venv/bin/python",
-      "args": ["-m", "mempalace.mcp_server"],
-      "cwd": "/path/to/project"
+      "command": "/path/to/your/venv/bin/python",
+      "args": ["-m", "mempalace.mcp_server"]
     }
   }
 }
 ```
 
-### Antigravity Example
+### Claude Desktop
 
-Antigravity stores MCP config in a user-level file, but the server itself can still be project-local.
-
-Example:
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "mempalace-ios": {
-      "transport": "stdio",
-      "command": "zsh",
-      "args": [
-        "-lc",
-        "cd /path/to/project && ./.venv/bin/python -m mempalace.mcp_server"
-      ]
+    "mempalace": {
+      "command": "/path/to/your/venv/bin/python",
+      "args": ["-m", "mempalace.mcp_server"]
     }
   }
 }
 ```
 
-Antigravity CLI can also add the server:
+### Cursor
 
-```bash
-<path-to-antigravity> --add-mcp '{"name":"mempalace-ios","transport":"stdio","command":"zsh","args":["-lc","cd /path/to/project && ./.venv/bin/python -m mempalace.mcp_server"]}'
+Add to `.cursor/mcp.json` in your project:
+
+```json
+{
+  "mcpServers": {
+    "mempalace": {
+      "command": "/path/to/your/venv/bin/python",
+      "args": ["-m", "mempalace.mcp_server"]
+    }
+  }
+}
 ```
 
-### Codex / OpenAI CLI-Style Agents
+## 🏗️ How It Works
 
-For tools that can launch an MCP stdio server per workspace, use the same per-repo command:
-
-```bash
-cd /path/to/project
-./.venv/bin/python -m mempalace.mcp_server
+```
+┌────────────────────────────────────────────────────┐
+│                  MCP Server                         │
+│  15 tools: search, ingest, facts, episodes, ...    │
+├────────────────────────────────────────────────────┤
+│                Application Layer                    │
+│  Ingestion → Segmentation → Embedding → Indexing   │
+│  Retrieval → Hybrid Search (FTS5 + Vector)         │
+│  Fact Extraction → Evidence Trails                  │
+├────────────────────────────────────────────────────┤
+│              Infrastructure Layer                   │
+│  SQLite Metadata │ FTS5 Keywords │ Vector Index    │
+│  Sentence-Transformers (all-MiniLM-L6-v2, 384d)   │
+└────────────────────────────────────────────────────┘
 ```
 
-If the client supports MCP config files, use the generic template above with `cwd` set to the repo root.
+### Key Features
 
-### Claude Code / Other MCP Clients
+| Feature | Description |
+|---------|-------------|
+| **Semantic Search** | Real embeddings via `all-MiniLM-L6-v2` (384-dim) |
+| **Hybrid Retrieval** | Combines FTS5 keyword + vector similarity |
+| **Fact Extraction** | Deterministic structured facts from documents |
+| **Episode Recall** | Time-bounded memory retrieval |
+| **Evidence Trails** | Full provenance for every search result |
+| **Conversation Ingestion** | Import Claude, ChatGPT, Codex chat exports |
+| **Project-Local** | Each repo gets its own isolated memory |
+| **Zero Cloud** | Everything runs locally — no API keys needed |
 
-If the client supports adding stdio MCP servers from the shell, point it at the repo-local Python executable:
+## 📖 API Reference
 
-```bash
-cd /path/to/project
-./.venv/bin/python -m mempalace.mcp_server
+```python
+from mempalace import LocalMemoryPlatform
+from mempalace.infrastructure.settings import MemorySettings
+
+# Create platform
+settings = MemorySettings.from_yaml("mempalace.yaml")
+platform = LocalMemoryPlatform.from_settings(settings)
+
+# Ingest a project
+result = platform.ingest_directory("/path/to/project")
+print(f"Ingested {result.documents_written} documents, {result.segments_written} segments")
+
+# Search
+from mempalace.domain.models import SearchRequest, SearchMode
+response = platform.search(SearchRequest(
+    query="authentication flow",
+    mode=SearchMode.HYBRID,
+    limit=5,
+))
+for hit in response.results:
+    print(f"[{hit.score:.3f}] {hit.document_title}: {hit.text[:100]}")
+
+# Extract facts
+facts = platform.extract_facts()
+for fact in facts.facts:
+    print(f"{fact.subject} → {fact.predicate} → {fact.object_text}")
 ```
 
-The exact registration command varies by client, but the important pieces stay the same:
+## ⚙️ Configuration
 
-- run the repo-local interpreter, not a global one
-- use `-m mempalace.mcp_server`
-- start it from the project root or configure `cwd` to the project root
+Create `mempalace.yaml` in your project root:
 
-## Legacy Migration
+```yaml
+workspace_id: my-project
 
-The new runtime now includes a first-pass migration path from the legacy Chroma palace:
+storage:
+  base_dir: ~/.mempalace/runtime
+  metadata_path: ~/.mempalace/runtime/metadata.sqlite3
+  embedding_provider: auto          # auto | sentence-transformer | hashing
+  embedding_model: all-MiniLM-L6-v2 # any sentence-transformers model
 
-```bash
-mempalace migrate-legacy ~/.mempalace/palace --config ./config.yaml
+segmenter:
+  max_chars: 900
+  overlap_chars: 120
+
+retrieval:
+  default_limit: 5
+  keyword_weight: 0.6
+  semantic_weight: 0.4
 ```
 
-This migration is intentionally conservative:
+### Embedding Providers
 
-- each legacy drawer becomes one `legacy_drawer` document in the new runtime
-- original `wing`, `room`, `source_file`, `chunk_index`, and `filed_at` values are preserved as metadata
-- the original drawer text is preserved verbatim as both document raw text and the indexed segment text
+| Provider | Install | Quality | Speed |
+|----------|---------|---------|-------|
+| `sentence-transformer` | `pip install mempalace[embeddings]` | ★★★★★ | ~80MB model download |
+| `hashing` | Built-in | ★★☆☆☆ | Instant, zero dependency |
+| `auto` (default) | — | Best available | Tries sentence-transformer first |
 
-This avoids inventing reconstructed full files that the legacy store does not actually contain.
+## 🛠️ MCP Tools
 
-## Structured Facts
+MemPalace exposes 15 tools via MCP:
 
-The service runtime now includes a deterministic structured fact path:
+| Tool | Description |
+|------|-------------|
+| `mempalace_status` | Palace health overview |
+| `mempalace_ingest` | Ingest a directory |
+| `mempalace_ingest_source` | Ingest a single file |
+| `mempalace_search` | Semantic/hybrid search |
+| `mempalace_search_time_range` | Time-bounded search |
+| `mempalace_explain_retrieval` | Debug search results |
+| `mempalace_fetch_document` | Get document + segments |
+| `mempalace_fetch_evidence` | Provenance trail |
+| `mempalace_extract_facts` | Extract structured facts |
+| `mempalace_query_facts` | Query fact store |
+| `mempalace_reindex` | Rebuild vector index |
+| `mempalace_recall_episodes` | Recall recent episodes |
+| `mempalace_compact_session_context` | Agent context block |
+| `mempalace_prepare_startup_context` | Agent startup context |
+| `mempalace_migrate_legacy` | Import legacy Chroma data |
 
-```bash
-mempalace extract-facts --config ./config.yaml
-mempalace query-facts "JWT" --predicate uses --config ./config.yaml
-```
-
-Current behavior:
-
-- facts are extracted from indexed segments using explicit regex-based patterns
-- each fact keeps `evidence_segment_id`, `document_id`, `source_uri`, and extraction pattern metadata
-- facts are stored separately from retrieval indexes in the local SQLite runtime
-
-This is intentionally conservative. It is inspectable and testable, but still a first-pass fact layer rather than a full knowledge graph replacement.
-
-## Context And Evidence
-
-The service runtime now has the core primitives needed for agent memory workflows:
-
-- explicit evidence trails around facts, segments, and documents
-- episode recall derived from stored documents and conversation sessions
-- compact session-context assembly with facts, episodes, and verbatim evidence
-- startup-context preparation for agents entering a workspace
-- vector reindexing from persisted segments without re-ingesting source files
-
-The current implementation stays local-first and deterministic:
-
-- project ingest preserves raw files, segment offsets, and classification metadata
-- conversation ingest preserves normalized raw transcripts and captures `session_id` when available
-- retrieval returns provenance-rich evidence with score breakdowns and candidate counts
-- context-building logic is explicit Python service code rather than hidden prompt heuristics
-
-## Development
-
-Install the project with development dependencies:
+## 🤝 Contributing
 
 ```bash
-uv sync --extra dev
+# Clone and setup
+git clone https://github.com/nguyenrot/mempalace.git
+cd mempalace
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev,embeddings]"
+
+# Run tests
+pytest tests/ -v
+
+# Lint
+ruff check mempalace/
 ```
 
-Run tests:
+## 📄 License
 
-```bash
-uv run pytest
-```
-
-## Legacy Commands
-
-The legacy palace commands still exist behind explicit names when you need them:
-
-```bash
-mempalace legacy-init <dir>
-mempalace legacy-mine <dir>
-mempalace legacy-search "query"
-mempalace legacy-status
-```
-
-They are no longer part of the primary CLI flow. The default `init`, `ingest`, `search`, and `status` commands all use the newer project-local service runtime.
+MIT © [phamkynguyen](https://github.com/nguyenrot)

@@ -32,7 +32,7 @@ from mempalace.domain.models import (
 from mempalace.infrastructure.logging import configure_logging
 from mempalace.infrastructure.settings import MemorySettings
 from mempalace.infrastructure.storage.sqlite_catalog import SqliteMetadataStore
-from mempalace.infrastructure.vector.hashing import HashingEmbeddingProvider
+from mempalace.infrastructure.vector.factory import create_embedding_provider
 from mempalace.infrastructure.vector.sqlite_index import SqliteVectorIndex
 
 
@@ -58,7 +58,7 @@ class LocalMemoryPlatform:
         logger = configure_logging(settings.logging)
         metadata_store = SqliteMetadataStore(settings.storage.resolved_metadata_path())
         vector_index = SqliteVectorIndex(settings.storage.resolved_metadata_path())
-        embedding_provider = HashingEmbeddingProvider()
+        embedding_provider = create_embedding_provider(settings.storage)
         segmenter = TextSegmenter(
             max_chars=settings.segmenter.max_chars,
             overlap_chars=settings.segmenter.overlap_chars,

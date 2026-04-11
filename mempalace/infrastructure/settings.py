@@ -16,6 +16,8 @@ class StorageSettings:
     base_dir: str = "~/.mempalace/runtime"
     metadata_path: str = "~/.mempalace/runtime/metadata.sqlite3"
     vector_backend: str = "sqlite"
+    embedding_provider: str = "auto"
+    embedding_model: str = "all-MiniLM-L6-v2"
 
     def resolved_base_dir(self) -> Path:
         """Return the expanded base directory."""

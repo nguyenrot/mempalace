@@ -20,10 +20,32 @@ from mempalace.domain.models import (
     SourceRecord,
     WorkspaceRecord,
 )
-from mempalace.general_extractor import extract_memories
 from mempalace.infrastructure.logging import log_event
 from mempalace.infrastructure.settings import MemorySettings
-from mempalace.normalize import normalize
+
+
+def normalize(path: str) -> str:
+    """Read and normalize a file's text content (replaces legacy normalize module)."""
+    text = Path(path).read_text(encoding="utf-8", errors="replace")
+    # Basic whitespace normalization
+    lines = text.splitlines()
+    normalized = "\n".join(line.rstrip() for line in lines)
+    return normalized.strip() + "\n" if normalized.strip() else ""
+
+
+def extract_memories(content: str) -> list[dict]:
+    """Extract classified memory chunks from text (replaces legacy general_extractor)."""
+    paragraphs = re.split(r"\n{2,}", content.strip())
+    memories = []
+    for para in paragraphs:
+        text = para.strip()
+        if len(text) < 20:
+            continue
+        memories.append({
+            "content": text,
+            "memory_type": detect_conversation_room(text),
+        })
+    return memories
 
 
 CONVERSATION_SKIP_DIRECTORIES = {"tool-results", "memory"}
