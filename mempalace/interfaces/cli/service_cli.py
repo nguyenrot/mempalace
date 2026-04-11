@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from mempalace.application.conversation_discovery import discover_chat_exports, format_discovery_for_display
 from mempalace.application.project_profiles import (
     ProjectInitResult,
     initialize_project_runtime,
@@ -57,6 +58,11 @@ def add_service_cli_parsers(subparsers: argparse._SubParsersAction) -> None:
         choices=["exchange", "general"],
         default="exchange",
         help="Conversation extraction mode (default: exchange)",
+    )
+    ingest_chat_parser.add_argument(
+        "--auto",
+        action="store_true",
+        help="Auto-discover chat exports from known locations and ingest them",
     )
     _add_runtime_args(ingest_chat_parser)
 
@@ -247,6 +253,18 @@ def add_service_cli_parsers(subparsers: argparse._SubParsersAction) -> None:
     )
     _add_runtime_args(migrate_parser)
 
+    # Discover chat exports command
+    discover_parser = subparsers.add_parser(
+        "discover-chats",
+        help="Discover available AI chat exports on this system",
+    )
+    discover_parser.add_argument(
+        "--tool",
+        default=None,
+        help="Filter discovery to a specific tool (e.g., claude_desktop, cursor, chatgpt)",
+    )
+    _add_runtime_args(discover_parser, include_workspace=False)
+
 
 def build_exact_filters(args: argparse.Namespace) -> dict[str, str]:
     """Build exact-match metadata filters from CLI arguments."""
@@ -328,14 +346,33 @@ def run_ingest_directory_service(args: argparse.Namespace) -> IngestionResult:
     )
 
 
-def run_ingest_chat_history_service(args: argparse.Namespace) -> IngestionResult:
-    """Execute chat-history ingest using the service-backed runtime."""
+def run_ingest_chat_history_service(args: argparse.Namespace) -> IngestionResult | list[IngestionResult]:
+    """Execute chat-history ingest using the service-backed runtime.
+
+    Supports both explicit directory and auto-discovery modes.
+    """
     platform = build_platform(config_path=args.config, workspace_id=args.workspace)
-    return platform.ingest_directory(
-        args.dir,
-        mode="convos",
-        extract_mode=args.extract,
-    )
+    if getattr(args, "auto", False):
+        # Auto-discover chat exports from known locations and configured sources
+        sources = discover_chat_exports(sources=platform.settings.conversation.sources)
+        if not sources:
+            # Nothing to ingest; return empty list
+            return []
+        results: list[IngestionResult] = []
+        for src in sources:
+            result = platform.ingest_directory(
+                src.path,
+                mode="convos",
+                extract_mode=args.extract,
+            )
+            results.append(result)
+        return results
+    else:
+        return platform.ingest_directory(
+            args.dir,
+            mode="convos",
+            extract_mode=args.extract,
+        )
 
 
 def run_ingest_source_service(args: argparse.Namespace) -> IngestionResult:
@@ -625,7 +662,12 @@ def cmd_ingest_directory_service(args: argparse.Namespace) -> None:
 
 def cmd_ingest_chat_history_service(args: argparse.Namespace) -> None:
     """Ingest chat history and print the structured result."""
-    print(dumps_json(run_ingest_chat_history_service(args)))
+    result = run_ingest_chat_history_service(args)
+    if isinstance(result, list):
+        for r in result:
+            print(dumps_json(r))
+    else:
+        print(dumps_json(result))
 
 
 def cmd_ingest_source_service(args: argparse.Namespace) -> None:
@@ -667,6 +709,15 @@ def cmd_init_project_service(args: argparse.Namespace) -> None:
 def cmd_migrate_legacy_service(args: argparse.Namespace) -> None:
     """Migrate a legacy Chroma palace and print JSON."""
     print(dumps_json(run_migrate_legacy_service(args)))
+
+
+def cmd_discover_chats_service(args: argparse.Namespace) -> None:
+    """Discover available chat exports and display them."""
+    platform = build_platform(config_path=args.config, workspace_id=args.workspace)
+    discovered = discover_chat_exports(sources=platform.settings.conversation.sources)
+    if args.tool:
+        discovered = [d for d in discovered if d.tool == args.tool]
+    print(format_discovery_for_display(discovered))
 
 
 def cmd_extract_facts_service(args: argparse.Namespace) -> None:

@@ -96,6 +96,7 @@ def main():
         "compact-session-context": _svc.cmd_compact_session_context_service,
         "prepare-startup-context": _svc.cmd_prepare_startup_context_service,
         "migrate-legacy": _svc.cmd_migrate_legacy_service,
+        "discover-chats": _svc.cmd_discover_chats_service,
         "status": _svc.cmd_status_health_service,
     }
 

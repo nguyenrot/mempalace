@@ -10,6 +10,15 @@ import yaml
 
 
 @dataclass(slots=True)
+class ConversationSource:
+    """A configured chat export source."""
+
+    tool: str  # e.g., "claude_desktop", "cursor", "chatgpt", "custom"
+    path: str
+    recursive: bool = True
+
+
+@dataclass(slots=True)
 class StorageSettings:
     """Persistent storage settings."""
 
@@ -148,6 +157,14 @@ class LoggingSettings:
 
 
 @dataclass(slots=True)
+class ConversationSettings:
+    """Chat history ingestion configuration."""
+
+    auto_discover: bool = False
+    sources: list[ConversationSource] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class MemorySettings:
     """Top-level application settings."""
 
@@ -157,6 +174,7 @@ class MemorySettings:
     ingestion: IngestionSettings = field(default_factory=IngestionSettings)
     retrieval: RetrievalSettings = field(default_factory=RetrievalSettings)
     logging: LoggingSettings = field(default_factory=LoggingSettings)
+    conversation: ConversationSettings = field(default_factory=ConversationSettings)
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "MemorySettings":
@@ -168,6 +186,10 @@ class MemorySettings:
     @classmethod
     def from_mapping(cls, payload: dict[str, Any]) -> "MemorySettings":
         """Construct settings from a plain mapping."""
+        conv_payload = payload.get("conversation", {})
+        sources_data = conv_payload.get("sources", [])
+        sources = [ConversationSource(**s) for s in sources_data]
+
         return cls(
             workspace_id=payload.get("workspace_id", "default"),
             storage=StorageSettings(**payload.get("storage", {})),
@@ -175,6 +197,10 @@ class MemorySettings:
             ingestion=IngestionSettings(**payload.get("ingestion", {})),
             retrieval=RetrievalSettings(**payload.get("retrieval", {})),
             logging=LoggingSettings(**payload.get("logging", {})),
+            conversation=ConversationSettings(
+                auto_discover=conv_payload.get("auto_discover", False),
+                sources=sources,
+            ),
         )
 
     def ensure_directories(self) -> None:
